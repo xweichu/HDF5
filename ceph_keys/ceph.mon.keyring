@@ -1,0 +1,22 @@
+[mon.]
+	key = AQB9Ct5cl2quChAAQAFhZ2ppdAqIE9wDDEB8RQ==
+	caps mon = "allow *"
+[client.admin]
+	key = AQB9Ct5cP97zBxAAvKCzCBJl10eGjXFoQ/nHOQ==
+	auid = 0
+	caps mds = "allow *"
+	caps mgr = "allow *"
+	caps mon = "allow *"
+	caps osd = "allow *"
+[client.bootstrap-mds]
+	key = AQB9Ct5cmzugEhAAPByKbgEDmaFpV5R0M8UaCA==
+	caps mon = "allow profile bootstrap-mds"
+[client.bootstrap-osd]
+	key = AQB9Ct5cpGY1DhAAhMd0CpJMozdpeIdI0nn8MA==
+	caps mon = "allow profile bootstrap-osd"
+[client.bootstrap-rbd]
+	key = AQB9Ct5cvImlGxAAolhDECE9d532K8mMIX5g5w==
+	caps mon = "allow profile bootstrap-rbd"
+[client.bootstrap-rgw]
+	key = AQB9Ct5cpIIeFxAAynaA9hItGKuuDr/rWOjtyA==
+	caps mon = "allow profile bootstrap-rgw"
