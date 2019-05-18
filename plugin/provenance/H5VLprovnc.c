@@ -3728,7 +3728,7 @@ H5VL_provenance_file_create(const char *name, unsigned flags, hid_t fcpl_id,
 
     // @xweichu
     CLIENT *cl;
-    cl = clnt_create(argv[1], HDF5SERVER, HDF5SERVER_V1, "tcp");
+    cl = clnt_create("localhost", HDF5SERVER, HDF5SERVER_V1, "tcp");
     creat_file_1(&name, cl);
     // FILE* file_ptr = fopen(name, "w");
     printf("inside\n");
@@ -3813,7 +3813,7 @@ H5VL_provenance_file_create(const char *name, unsigned flags, hid_t fcpl_id,
 // #endif /* H5_HAVE_PARALLEL */
 
     // TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
-    return (void *)file_ptr;
+    return NULL;
 } /* end H5VL_provenance_file_create() */
 
 
