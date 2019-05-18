@@ -40,6 +40,7 @@
 
 #include "hdf5.h"
 #include "H5VLprovnc.h"
+#include "hdf5creat.h"
 
 /**********/
 /* Macros */
@@ -3726,7 +3727,10 @@ H5VL_provenance_file_create(const char *name, unsigned flags, hid_t fcpl_id,
 
 
     // @xweichu
-    FILE* file_ptr = fopen(name, "w");
+    CLIENT *cl;
+    cl = clnt_create(argv[1], HDF5SERVER, HDF5SERVER_V1, "tcp");
+    creat_file_1(&name, cl);
+    // FILE* file_ptr = fopen(name, "w");
     printf("inside\n");
 
     /* Get copy of our VOL info from FAPL */
