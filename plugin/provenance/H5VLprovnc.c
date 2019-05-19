@@ -3730,6 +3730,7 @@ H5VL_provenance_file_create(const char *name, unsigned flags, hid_t fcpl_id,
     CLIENT *cl;
     cl = clnt_create("localhost", HDF5SERVER, HDF5SERVER_V1, "tcp");
     char* new_name = malloc(strlen(name)+1);
+    printf(new_name);
     strcpy(new_name,name);
     creat_file_1(&new_name, cl);
     // FILE* file_ptr = fopen(name, "w");
