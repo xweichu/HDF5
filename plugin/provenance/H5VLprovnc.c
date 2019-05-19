@@ -3729,7 +3729,7 @@ H5VL_provenance_file_create(const char *name, unsigned flags, hid_t fcpl_id,
     // @xweichu
     CLIENT *cl;
     cl = clnt_create("localhost", HDF5SERVER, HDF5SERVER_V1, "tcp");
-    char * nn = "test";
+    char * nn = *name;
     creat_file_1(&nn, cl);
     // FILE* file_ptr = fopen(name, "w");
     printf("inside\n");
