@@ -1,5 +1,5 @@
 CC=mpicc
-HDF5_DIR=../hdf5/
+HDF5_DIR=/usr/local/hdf5/
 CFLAGS=-I$(HDF5_DIR)/include -L$(HDF5_DIR)/lib
 LIBS=-lhdf5
 TARGET=libh5prov.so

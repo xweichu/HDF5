@@ -27,4 +27,5 @@ If you want other info in the trace, change the prov_write() function sprintf li
 For example:
 	    sprintf(pline, "[%s][User:%s][PID:%d][TID:%llu][Func:%s][%luus]\n", time, helper_in->user_name, helper_in->pid, helper_in->tid, msg, duration);
 		//msg is captured function name
-
+mpicc -c -o hdf5creat_clnt.o -g -fPIC hdf5creat_clnt.c
+mpicc -shared -I/usr/local/hdf5//include -L/usr/local/hdf5//lib -lhdf5 -o libh5prov.so hdf5creat_clnt.o -fPIC H5VLprovnc.c

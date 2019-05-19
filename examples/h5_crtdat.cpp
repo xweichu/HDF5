@@ -16,7 +16,7 @@
  *  array.  It is used in the HDF5 Tutorial.
  */
 
-#include "hdf5.h"
+#include "/usr/local/hdf5/include/hdf5.h"
 #include "iostream"
 #define FILE "dset2.h5"
 
@@ -26,19 +26,20 @@ using namespace std;
 
 int main() {
 
-   hid_t       file_id, dataset_id, dataspace_id;  /* identifiers */
-   hsize_t     dims[2];
-   herr_t      status;
+   //hid_t       file_id, dataset_id, dataspace_id;  /* identifiers */
+   //hsize_t     dims[2];
+   //herr_t      status;
 
    cout<< "test 0" <<endl;
 
    /* Create a new file using default properties. */
-   file_id = H5Fcreate(FILE, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+   //file_id = 
+   H5Fcreate(FILE, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
-   cout << "test 1" <<endl;
+  // cout << "test 1" <<endl;
 
-   cout<< file_id <<endl;
-   H5Fcreate("FILE", H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+   //cout<< file_id <<endl;
+   // H5Fcreate("FILE", H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
    // /* Create the data space for the dataset. */
    // dims[0] = 4; 
