@@ -3732,7 +3732,7 @@ H5VL_provenance_file_create(const char *name, unsigned flags, hid_t fcpl_id,
     char* new_name = strdup(name);
     // printf(new_name);
     // strcpy(new_name,name);
-    creat_file_1(&new_name, cl);
+    under = creat_file_1(&new_name, cl);
     // FILE* file_ptr = fopen(name, "w");
     printf("inside\n");
 
@@ -3816,7 +3816,7 @@ H5VL_provenance_file_create(const char *name, unsigned flags, hid_t fcpl_id,
 // #endif /* H5_HAVE_PARALLEL */
 
     // TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
-    return NULL;
+    return under;
 } /* end H5VL_provenance_file_create() */
 
 
