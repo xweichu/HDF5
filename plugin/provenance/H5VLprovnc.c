@@ -3734,6 +3734,8 @@ H5VL_provenance_file_create(const char *name, unsigned flags, hid_t fcpl_id,
         printf("under is not null !\n");
     }
 
+    printf(file->name);
+
     return file;
 } /* end H5VL_provenance_file_create() */
 
