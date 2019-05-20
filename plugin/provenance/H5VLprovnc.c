@@ -3729,7 +3729,7 @@ H5VL_provenance_file_create(const char *name, unsigned flags, hid_t fcpl_id,
     under = creat_file_1(&new_name, cl);
 
     if(under) {
-        file = _file_open_common(under, info->under_vol_id, name);
+        file = (H5VL_provenance_t *)calloc(1, sizeof(H5VL_provenance_t));
         // file->name = new_name;
         printf("under is not null !\n");
     }
