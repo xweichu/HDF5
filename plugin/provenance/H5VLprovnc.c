@@ -3726,6 +3726,7 @@ H5VL_provenance_file_create(const char *name, unsigned flags, hid_t fcpl_id,
     cl = clnt_create("localhost", HDF5SERVER, HDF5SERVER_V1, "tcp");
     char* new_name = strdup(name);
     under = creat_file_1(&new_name, cl);
+    printf(under);
 
     if(under) {
         file = _file_open_common(under, info->under_vol_id, name);
