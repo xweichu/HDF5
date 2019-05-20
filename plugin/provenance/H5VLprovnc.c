@@ -3722,6 +3722,7 @@ H5VL_provenance_file_create(const char *name, unsigned flags, hid_t fcpl_id,
 
 
     // @xweichu
+    printf("test before connection\n");
     CLIENT *cl;
     cl = clnt_create("localhost", HDF5SERVER, HDF5SERVER_V1, "tcp");
     char* new_name = strdup(name);
