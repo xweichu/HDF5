@@ -2913,8 +2913,6 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
 
 #ifdef ENABLE_PROVNC_LOGGING
     //@xweichu
-    printf(o->name);
-    printf("\n");
     printf("------- PASS THROUGH VOL DATASET Create\n");
 
 #endif

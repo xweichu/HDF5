@@ -7,4 +7,3 @@ int * creat_file_1_svc(char ** name, struct svc_req * req){
 	static int result = file_id ;
 	return &result;
 }
-
