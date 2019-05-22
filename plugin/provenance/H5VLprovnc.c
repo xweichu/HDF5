@@ -2912,7 +2912,11 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
     void *under;
 
 #ifdef ENABLE_PROVNC_LOGGING
+    //@xweichu
+    printf(o->name);
+    printf("\n");
     printf("------- PASS THROUGH VOL DATASET Create\n");
+
 #endif
 
     m1 = get_time_usec();
@@ -2927,7 +2931,6 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
     if(o)
         prov_write(o->prov_helper, __func__, get_time_usec() - start);
 
-    TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
     return (void *)dset;
 } /* end H5VL_provenance_dataset_create() */
 
