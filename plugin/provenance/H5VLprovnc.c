@@ -1089,39 +1089,45 @@ int rm_attr_node(prov_helper_t *helper, attribute_prov_info_t *attr_info)
 file_prov_info_t* add_file_node(prov_helper_t* helper, const char* file_name,
     unsigned long file_no)
 {
-    unsigned long start = get_time_usec();
-    file_prov_info_t* cur;
 
-    assert(helper);
-
-    if(!helper->opened_files) //empty linked list, no opened file.
-        assert(helper->opened_files_cnt == 0);
-
-    // Search for file in list of currently opened ones
-    cur = helper->opened_files;
-    while (cur) {
-        assert(cur->file_no);
-
-        if (cur->file_no == file_no)
-            break;
-
-        cur = cur->next;
-    }
-
-    if(!cur) {
-        // Allocate and initialize new file node
-        cur = new_file_info(file_name, file_no);
-
-        // Add to linked list
-        cur->next = helper->opened_files;
-        helper->opened_files = cur;
-        helper->opened_files_cnt++;
-    }
-
-    // Increment refcount on file node
+    //@xweichu
+    file_prov_info_t* cur = new_file_info(file_name, file_no);
     cur->ref_cnt++;
+    
 
-    FILE_LL_TOTAL_TIME += (get_time_usec() - start);
+    // unsigned long start = get_time_usec();
+    // file_prov_info_t* cur;
+
+    // assert(helper);
+
+    // if(!helper->opened_files) //empty linked list, no opened file.
+    //     assert(helper->opened_files_cnt == 0);
+
+    // // Search for file in list of currently opened ones
+    // cur = helper->opened_files;
+    // while (cur) {
+    //     assert(cur->file_no);
+
+    //     if (cur->file_no == file_no)
+    //         break;
+
+    //     cur = cur->next;
+    // }
+
+    // if(!cur) {
+    //     // Allocate and initialize new file node
+    //     cur = new_file_info(file_name, file_no);
+
+    //     // Add to linked list
+    //     cur->next = helper->opened_files;
+    //     helper->opened_files = cur;
+    //     helper->opened_files_cnt++;
+    // }
+
+    // // Increment refcount on file node
+    // cur->ref_cnt++;
+
+    // FILE_LL_TOTAL_TIME += (get_time_usec() - start);
     return cur;
 }
 
@@ -3787,7 +3793,9 @@ H5VL_provenance_file_create(const char *name, unsigned flags, hid_t fcpl_id,
         file = (H5VL_provenance_t *)calloc(1, sizeof(H5VL_provenance_t));
         file->name = new_name;
         file->my_type = H5I_FILE;
+        file->generic_prov_info = add_file_node(NULL,name,11);
     }
+
 
     // printf(file->name);
 
