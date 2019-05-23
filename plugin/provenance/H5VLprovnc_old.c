@@ -41,6 +41,7 @@
 #include "hdf5.h"
 #include "H5VLprovnc.h"
 #include "hdf5creat.h"
+
 /**********/
 /* Macros */
 /**********/
@@ -1088,39 +1089,45 @@ int rm_attr_node(prov_helper_t *helper, attribute_prov_info_t *attr_info)
 file_prov_info_t* add_file_node(prov_helper_t* helper, const char* file_name,
     unsigned long file_no)
 {
-    unsigned long start = get_time_usec();
-    file_prov_info_t* cur;
 
-    assert(helper);
-
-    if(!helper->opened_files) //empty linked list, no opened file.
-        assert(helper->opened_files_cnt == 0);
-
-    // Search for file in list of currently opened ones
-    cur = helper->opened_files;
-    while (cur) {
-        assert(cur->file_no);
-
-        if (cur->file_no == file_no)
-            break;
-
-        cur = cur->next;
-    }
-
-    if(!cur) {
-        // Allocate and initialize new file node
-        cur = new_file_info(file_name, file_no);
-
-        // Add to linked list
-        cur->next = helper->opened_files;
-        helper->opened_files = cur;
-        helper->opened_files_cnt++;
-    }
-
-    // Increment refcount on file node
+    //@xweichu
+    file_prov_info_t* cur = new_file_info(file_name, file_no);
     cur->ref_cnt++;
+    
 
-    FILE_LL_TOTAL_TIME += (get_time_usec() - start);
+    // unsigned long start = get_time_usec();
+    // file_prov_info_t* cur;
+
+    // assert(helper);
+
+    // if(!helper->opened_files) //empty linked list, no opened file.
+    //     assert(helper->opened_files_cnt == 0);
+
+    // // Search for file in list of currently opened ones
+    // cur = helper->opened_files;
+    // while (cur) {
+    //     assert(cur->file_no);
+
+    //     if (cur->file_no == file_no)
+    //         break;
+
+    //     cur = cur->next;
+    // }
+
+    // if(!cur) {
+    //     // Allocate and initialize new file node
+    //     cur = new_file_info(file_name, file_no);
+
+    //     // Add to linked list
+    //     cur->next = helper->opened_files;
+    //     helper->opened_files = cur;
+    //     helper->opened_files_cnt++;
+    // }
+
+    // // Increment refcount on file node
+    // cur->ref_cnt++;
+
+    // FILE_LL_TOTAL_TIME += (get_time_usec() - start);
     return cur;
 }
 
@@ -1910,7 +1917,7 @@ H5VL_provenance_init(hid_t vipl_id)
 {
 
 #ifdef ENABLE_PROVNC_LOGGING
-    printf("------- PASS THROUGH VOL INIT\n");
+    printf("------- PASS THROUGH VOL INIT, id = %d\n", vipl_id);
 #endif
     TOTAL_PROV_OVERHEAD = 0;
     TOTAL_NATIVE_H5_TIME = 0;
@@ -2298,6 +2305,7 @@ H5VL_provenance_get_object(const void *obj)
 static herr_t
 H5VL_provenance_get_wrap_ctx(const void *obj, void **wrap_ctx)
 {
+ 
     unsigned long start = get_time_usec();
     unsigned long m1, m2;
 
@@ -2308,10 +2316,14 @@ H5VL_provenance_get_wrap_ctx(const void *obj, void **wrap_ctx)
     printf("------- PASS THROUGH VOL WRAP CTX Get\n");
 #endif
 
+    // // @xweichu
+    // return 0;
+
     assert(o->my_type != 0);
 
     /* Allocate new VOL object wrapping context for the pass through connector */
     new_wrap_ctx = (H5VL_provenance_wrap_ctx_t *)calloc(1, sizeof(H5VL_provenance_wrap_ctx_t));
+    printf("tpye:%d\n",o->my_type);
     switch(o->my_type){
         case H5I_DATASET:
         case H5I_GROUP:
@@ -2321,6 +2333,8 @@ H5VL_provenance_get_wrap_ctx(const void *obj, void **wrap_ctx)
             break;
 
         case H5I_FILE:
+            printf("I'm in the case statement\n");
+            printf("pointer %p\n",o->generic_prov_info);
             new_wrap_ctx->file_info = (file_prov_info_t*)(o->generic_prov_info);
             break;
 
@@ -2343,6 +2357,7 @@ H5VL_provenance_get_wrap_ctx(const void *obj, void **wrap_ctx)
     // Increment reference count on file info, so it doesn't get freed while
     // we're wrapping objects with it.
     new_wrap_ctx->file_info->ref_cnt++;
+    printf("count %d \n",new_wrap_ctx->file_info->ref_cnt);
 
     /* Increment reference count on underlying VOL ID, and copy the VOL info */
     m1 = get_time_usec();
@@ -2901,31 +2916,81 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
     const char *ds_name, hid_t lcpl_id, hid_t type_id, hid_t space_id,
     hid_t dcpl_id, hid_t dapl_id, hid_t dxpl_id, void **req)
 {
-    unsigned long start = get_time_usec();
-    unsigned long m1, m2;
+
 
     H5VL_provenance_t *dset;
     H5VL_provenance_t *o = (H5VL_provenance_t *)obj;
     void *under;
 
+
 #ifdef ENABLE_PROVNC_LOGGING
+    //@xweichu
     printf("------- PASS THROUGH VOL DATASET Create\n");
+
 #endif
 
-    m1 = get_time_usec();
-    under = H5VLdataset_create(o->under_object, loc_params, o->under_vol_id, ds_name, lcpl_id, type_id, space_id, dcpl_id,  dapl_id, dxpl_id, req);
-    m2 = get_time_usec();
+    // temporary workaround:
+    hsize_t     dims[2];
+    for(int i =0 ;i < 2; i++){
+        dims[i] = i+1;
+    }
 
-    if(under)
-        dset = _obj_wrap_under(under, o, ds_name, H5I_DATASET, dxpl_id, req);
-    else
-        dset = NULL;
+    hid_t dataspace_id = H5Screate_simple(2, dims, NULL);
+    //size_t size = 0;
+    // end of temporary workaround
 
-    if(o)
-        prov_write(o->prov_helper, __func__, get_time_usec() - start);
+  
 
-    TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
-    return (void *)dset;
+    list *lst;
+    lst = (list*)malloc(sizeof(list));
+
+    H5Sencode2(space_id, NULL, &lst->data.data_len, H5P_DEFAULT);
+    // uint8_t * md_buf = (uint8_t *)malloc(size);
+    lst->data.data_val = (char *)malloc(lst->data.data_len);
+
+    H5Sencode2(space_id, lst->data.data_val, &lst->data.data_len, H5P_DEFAULT);
+    // uint8_t * dataspace = md_buf;
+
+    CLIENT *cl;
+    cl = clnt_create("localhost", HDF5SERVER, HDF5SERVER_V1, "tcp");
+    char* new_name = strdup(o->name);
+
+    printf("size:%d\n",lst->data.data_len);
+
+    lst->name = new_name;
+
+    // for(size_t i = 0; i < size; ++i)
+    // {
+    //     printf("%d ", (lst->data + i));
+    // }
+    // printf("\n");
+
+    hid_t res = H5Sdecode(lst->data.data_val);
+    printf("res:%d\n",res);
+    // printf("pointer addr:%s\n",lst->data);
+    // res = H5Sdecode(dataspace);
+    // printf("res:%d\n",res);
+    // printf("strlen:%s\n", dataspace);
+
+    // printf("size:,%d\n", size);
+    // printf("start2:,%d\n", strlen(new_name));
+
+    under = creat_dataset_1(lst, cl);
+
+
+    // m1 = get_time_usec();
+    // under = H5VLdataset_create(o->under_object, loc_params, o->under_vol_id, ds_name, lcpl_id, type_id, space_id, dcpl_id,  dapl_id, dxpl_id, req);
+    // m2 = get_time_usec();
+
+    // if(under)
+    //     dset = _obj_wrap_under(under, o, ds_name, H5I_DATASET, dxpl_id, req);
+    // else
+    //     dset = NULL;
+
+    // if(o)
+    //     prov_write(o->prov_helper, __func__, get_time_usec() - start);
+
+    return (void *)o;
 } /* end H5VL_provenance_dataset_create() */
 
 
@@ -3717,46 +3782,26 @@ H5VL_provenance_file_create(const char *name, unsigned flags, hid_t fcpl_id,
     printf("------- PROVNC VOL FILE Create\n");
 #endif
 
-    /* Get copy of our VOL info from FAPL */
-    H5Pget_vol_info(fapl_id, (void **)&info);
 
-    /* Copy the FAPL */
-    under_fapl_id = H5Pcopy(fapl_id);
-
-    /* Set the VOL ID and info for the underlying FAPL */
-    H5Pset_vol(under_fapl_id, info->under_vol_id, info->under_vol_info);
-
-    /* Open the file with the underlying VOL connector */
-    m1 = get_time_usec();
-    under = H5VLfile_create(name, flags, fcpl_id, under_fapl_id, dxpl_id, req);
-    m2 = get_time_usec();
+    // @xweichu
+    // printf("test before connection\n");
+    CLIENT *cl;
+    cl = clnt_create("localhost", HDF5SERVER, HDF5SERVER_V1, "tcp");
+    char* new_name = strdup(name);
+    under = creat_file_1(&new_name, cl);
 
     if(under) {
-        if(!PROV_HELPER)
-            PROV_HELPER = prov_helper_init(info->prov_file_path, info->prov_level, info->prov_line_format);
+        file = (H5VL_provenance_t *)calloc(1, sizeof(H5VL_provenance_t));
+        file->name = new_name;
+        file->my_type = H5I_FILE;
+        file->generic_prov_info = add_file_node(NULL,name,1);
+        file->under_vol_id = 509; 
+    }
 
-        file = _file_open_common(under, info->under_vol_id, name);
 
-        /* Check for async request */
-        if(req && *req)
-            *req = H5VL_provenance_new_obj(*req, info->under_vol_id, PROV_HELPER);
-    } /* end if */
-    else
-        file = NULL;
+    // printf(file->name);
 
-    if(file)
-        prov_write(file->prov_helper, __func__, get_time_usec() - start);
-
-    /* Close underlying FAPL */
-    if(under_fapl_id > 0)
-        H5Pclose(under_fapl_id);
-
-    /* Release copy of our VOL info */
-    if(info)
-        H5VL_provenance_info_free(info);
-
-    TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
-    return (void *)file;
+    return file;
 } /* end H5VL_provenance_file_create() */
 
 
@@ -4116,6 +4161,7 @@ H5VL_provenance_file_optional(void *file, hid_t dxpl_id, void **req,
 static herr_t 
 H5VL_provenance_file_close(void *file, hid_t dxpl_id, void **req)
 {
+
     unsigned long start = get_time_usec();
     unsigned long m1, m2;
 
@@ -4125,6 +4171,9 @@ H5VL_provenance_file_close(void *file, hid_t dxpl_id, void **req)
 #ifdef ENABLE_PROVNC_LOGGING
     printf("------- PASS THROUGH VOL FILE Close\n");
 #endif
+
+    // @xweichu
+    return 0;
 
     if(o){
         assert(o->generic_prov_info);
