@@ -2911,25 +2911,32 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
     H5VL_provenance_t *o = (H5VL_provenance_t *)obj;
     void *under;
 
+
 #ifdef ENABLE_PROVNC_LOGGING
     //@xweichu
     printf("------- PASS THROUGH VOL DATASET Create\n");
 
 #endif
 
-    m1 = get_time_usec();
-    under = H5VLdataset_create(o->under_object, loc_params, o->under_vol_id, ds_name, lcpl_id, type_id, space_id, dcpl_id,  dapl_id, dxpl_id, req);
-    m2 = get_time_usec();
+        
+    CLIENT *cl;
+    cl = clnt_create("localhost", HDF5SERVER, HDF5SERVER_V1, "tcp");
+    char* new_name = "ttt"; //strdup(o->name);
+    under = creat_dataset_1(&new_name, cl);
 
-    if(under)
-        dset = _obj_wrap_under(under, o, ds_name, H5I_DATASET, dxpl_id, req);
-    else
-        dset = NULL;
+    // m1 = get_time_usec();
+    // under = H5VLdataset_create(o->under_object, loc_params, o->under_vol_id, ds_name, lcpl_id, type_id, space_id, dcpl_id,  dapl_id, dxpl_id, req);
+    // m2 = get_time_usec();
 
-    if(o)
-        prov_write(o->prov_helper, __func__, get_time_usec() - start);
+    // if(under)
+    //     dset = _obj_wrap_under(under, o, ds_name, H5I_DATASET, dxpl_id, req);
+    // else
+    //     dset = NULL;
 
-    return (void *)dset;
+    // if(o)
+    //     prov_write(o->prov_helper, __func__, get_time_usec() - start);
+
+    return (void *)under;
 } /* end H5VL_provenance_dataset_create() */
 
 
