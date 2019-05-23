@@ -2923,15 +2923,21 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
     char* new_name = strdup(o->name);
 
     // temporary workaround:
-    // hsize_t     dims[2];
-    // dims[0] = 4; 
-    // dims[1] = 6; 
-    // hid_t dataspace_id = H5Screate_simple(2, dims, NULL);
+    hsize_t     dims[2];
+    dims[0] = 4; 
+    dims[1] = 6; 
+    hid_t dataspace_id = H5Screate_simple(2, dims, NULL);
     size_t size = 0;
     // end of temporary workaround
 
     H5Sencode2(space_id, NULL, &size, H5P_DEFAULT);
+    uint8_t *md_buf = (uint8_t *)malloc(size);
+    H5Sencode2(space_id, md_buf, &size, H5P_DEFAULT);
+
     printf("space_id: %d, space size: %d \n",space_id,size);
+    char * str = (char *)md_buf;
+
+    printf("buf content:"+ *str);
 
     // under = creat_dataset_1(&new_name, cl);
 
