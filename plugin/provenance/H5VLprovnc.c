@@ -1922,7 +1922,6 @@ H5VL_provenance_init(hid_t vipl_id)
     ATTR_LL_TOTAL_TIME = 0;
     /* Shut compiler up about unused parameter */
     vipl_id = vipl_id;
-    printf("done? %d \n", vipl_id);
 
     return 0;
 } /* end H5VL_provenance_init() */
@@ -3718,6 +3717,7 @@ H5VL_provenance_file_create(const char *name, unsigned flags, hid_t fcpl_id,
     printf("------- PROVNC VOL FILE Create\n");
 #endif
 
+    FUNC_ENTER_VOL(void *, NULL);
     printf("I'm here!FAPL is %d \n", fapl_id);
     /* Get copy of our VOL info from FAPL */
     H5Pget_vol_info(fapl_id, (void **)&info);
