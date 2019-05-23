@@ -2924,7 +2924,7 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
     char* new_name = strdup(o->name);
 
     size_t size = 0;
-    H5Sencode(space_id,NULL, &size);
+    H5Sencode(space_id,NULL, &size, H5P_DEFAULT);
     printf("%d\n",size);
 
     under = creat_dataset_1(&new_name, cl);
