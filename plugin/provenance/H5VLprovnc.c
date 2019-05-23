@@ -3756,6 +3756,7 @@ H5VL_provenance_file_create(const char *name, unsigned flags, hid_t fcpl_id,
         H5VL_provenance_info_free(info);
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
+    printf("total overhead:%d",TOTAL_PROV_OVERHEAD);
     return (void *)file;
 } /* end H5VL_provenance_file_create() */
 
