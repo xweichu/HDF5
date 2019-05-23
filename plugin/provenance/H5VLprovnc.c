@@ -2918,9 +2918,9 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
 #endif
 
         
-    CLIENT *cl;
-    cl = clnt_create("localhost", HDF5SERVER, HDF5SERVER_V1, "tcp");
-    char* new_name = strdup(o->name);
+    // CLIENT *cl;
+    // cl = clnt_create("localhost", HDF5SERVER, HDF5SERVER_V1, "tcp");
+    // char* new_name = strdup(o->name);
 
     size_t size = 0;
     H5Sencode2(space_id, NULL, &size, H5P_DEFAULT);
