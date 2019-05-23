@@ -2922,10 +2922,12 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
     for(int i =0 ;i < 50; i++){
         dims[i] = i+1;
     }
-    
+
     hid_t dataspace_id = H5Screate_simple(2, dims, NULL);
     //size_t size = 0;
     // end of temporary workaround
+
+  
 
     list *lst;
     lst = (list*)malloc(sizeof(list));
@@ -2941,7 +2943,7 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
     cl = clnt_create("localhost", HDF5SERVER, HDF5SERVER_V1, "tcp");
     char* new_name = strdup(o->name);
 
-    
+    printf("size:%d\n",lst->data.data_len);
 
     lst->name = new_name;
 
