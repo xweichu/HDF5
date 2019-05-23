@@ -2927,7 +2927,7 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
 
     list *lst;
     lst = (list*)malloc(sizeof(list));
-    
+
     H5Sencode2(space_id, NULL, &size, H5P_DEFAULT);
     // uint8_t * md_buf = (uint8_t *)malloc(size);
     lst->data = (uint8_t *)malloc(size);
@@ -2952,6 +2952,7 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
     // lst->data = dataspace;
     lst->name = new_name;
 
+    printf("data:%s \n",lst->data);
     hid_t res = H5Sdecode(lst->data);
     printf("res:%d\n",res);
       
