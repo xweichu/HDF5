@@ -12,7 +12,11 @@ int * creat_dataset_1_svc(list * lst, struct svc_req * req){
 	list *ptr;
     ptr = lst;
 
-	printf("data:0x%x\n",*ptr->data);
+	printf("data:");
+	for(int i=0; i<63; i++){
+		printf("0x%x\n",*(ptr->data+i));
+	}
+	
 	
 	// hid_t file_id = H5Fcreate(*name, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 	hid_t file_id = H5Fopen(ptr->name,H5F_ACC_RDWR,H5P_DEFAULT);
