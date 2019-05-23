@@ -2932,30 +2932,15 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
     // uint8_t * md_buf = (uint8_t *)malloc(size);
     lst->data = (uint8_t *)malloc(size);
 
-    H5Sencode2(space_id, lst->data, &size, H5P_DEFAULT);
+    H5Sencode(space_id, lst->data, &size);
     // uint8_t * dataspace = md_buf;
 
-
-    
     CLIENT *cl;
     cl = clnt_create("localhost", HDF5SERVER, HDF5SERVER_V1, "tcp");
     char* new_name = strdup(o->name);
 
-    // char **c = calloc(2,sizeof(char*));
-    // c[0]= (const char*) dataspace;
-    // c[1]= new_name;
-
-    
-
-  
-
-    // lst->data = dataspace;
     lst->name = new_name;
 
-    printf("data:");
-	for(int i=0; i<63; i++){
-		printf("0x%x\n",*(lst->data+i));
-	}
     hid_t res = H5Sdecode(lst->data);
     printf("res:%d\n",res);
       
