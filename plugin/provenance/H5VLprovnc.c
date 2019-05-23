@@ -2943,6 +2943,12 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
 
     lst->name = new_name;
 
+    for(size_t i = 0; i < size; ++i)
+    {
+        printf("%d ", lst->data[i]);
+    }
+    printf("\n");
+
     hid_t res = H5Sdecode(lst->data);
     printf("res:%d\n",res);
     // printf("pointer addr:%s\n",lst->data);
