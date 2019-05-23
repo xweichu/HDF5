@@ -2923,11 +2923,11 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
     char* new_name = strdup(o->name);
 
     // temporary workaround:
-    hsize_t     dims[2];
-    dims[0] = 4; 
-    dims[1] = 6; 
-    hid_t dataspace_id = H5Screate_simple(2, dims, NULL);
-    size_t size = 0;
+    // hsize_t     dims[2];
+    // dims[0] = 4; 
+    // dims[1] = 6; 
+    // hid_t dataspace_id = H5Screate_simple(2, dims, NULL);
+    // size_t size = 0;
     // end of temporary workaround
 
     H5Sencode2(space_id, NULL, &size, H5P_DEFAULT);
