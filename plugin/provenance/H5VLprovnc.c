@@ -2951,7 +2951,7 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
     // printf("size:,%d\n", size);
     // printf("start2:,%d\n", strlen(new_name));
 
-    under = creat_dataset_1(&dataspace, cl);
+    under = creat_dataset_1(c[0], cl);
 
 
     // m1 = get_time_usec();
