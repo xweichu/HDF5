@@ -35,6 +35,7 @@ int main() {
    /* Create a new file using default properties. */
    //file_id = 
    file_id = H5Fcreate(FILE, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+   H5Fclose(file_id);
 
    // /* Create the data space for the dataset. */
    dims[0] = 4; 
