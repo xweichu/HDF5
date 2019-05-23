@@ -2922,8 +2922,12 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
     // cl = clnt_create("localhost", HDF5SERVER, HDF5SERVER_V1, "tcp");
     // char* new_name = strdup(o->name);
 
+    hsize_t     dims[2];
+    dims[0] = 4; 
+    dims[1] = 6; 
+    hid_t dataspace_id = H5Screate_simple(2, dims, NULL);
     size_t size = 0;
-    H5Sencode2(space_id, NULL, &size, H5P_DEFAULT);
+    H5Sencode2(dataspace_id, NULL, &size, H5P_DEFAULT);
     printf("space_id: %d, space size: %d \n",space_id,size);
 
     // under = creat_dataset_1(&new_name, cl);
