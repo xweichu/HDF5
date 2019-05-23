@@ -2951,8 +2951,8 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
     // lst->data = dataspace;
     lst->name = new_name;
 
-    // hid_t res = H5Sdecode(c[0]);
-    // printf("res:%d\n",res);
+    hid_t res = H5Sdecode(lst->data);
+    printf("res:%d\n",res);
       
     // res = H5Sdecode(dataspace);
     // printf("res:%d\n",res);
