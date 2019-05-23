@@ -3794,7 +3794,7 @@ H5VL_provenance_file_create(const char *name, unsigned flags, hid_t fcpl_id,
         file->name = new_name;
         file->my_type = H5I_FILE;
         file->generic_prov_info = add_file_node(NULL,name,1);
-        // file->under_vol_id = 
+        file->under_vol_id = 0; 
     }
 
 
