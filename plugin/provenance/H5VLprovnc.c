@@ -3783,6 +3783,7 @@ H5VL_provenance_file_create(const char *name, unsigned flags, hid_t fcpl_id,
     if(under) {
         file = (H5VL_provenance_t *)calloc(1, sizeof(H5VL_provenance_t));
         file->name = new_name;
+        file->my_type = H5I_FILE;
     }
 
     // printf(file->name);
