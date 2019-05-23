@@ -3722,7 +3722,7 @@ H5VL_provenance_file_create(const char *name, unsigned flags, hid_t fcpl_id,
 
     /* Copy the FAPL */
     under_fapl_id = H5Pcopy(fapl_id);
-    printf("under id %d \n", under_fapl_id);
+    printf("under id %d \n", fapl_id);
 
     /* Set the VOL ID and info for the underlying FAPL */
     //@xweichu this causes some problems.
