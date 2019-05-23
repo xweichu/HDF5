@@ -3720,6 +3720,8 @@ H5VL_provenance_file_create(const char *name, unsigned flags, hid_t fcpl_id,
     /* Get copy of our VOL info from FAPL */
     H5Pget_vol_info(fapl_id, (void **)&info);
 
+    printf("I'm here!");
+
     /* Copy the FAPL */
     under_fapl_id = H5Pcopy(fapl_id);
 
@@ -3729,7 +3731,7 @@ H5VL_provenance_file_create(const char *name, unsigned flags, hid_t fcpl_id,
     /* Open the file with the underlying VOL connector */
     m1 = get_time_usec();
 
-    printf("I'm here!");
+
     //@xweichu
     // under = H5VLfile_create(name, flags, fcpl_id, under_fapl_id, dxpl_id, req);
     CLIENT *cl;
