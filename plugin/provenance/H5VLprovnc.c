@@ -1917,7 +1917,7 @@ H5VL_provenance_init(hid_t vipl_id)
 {
 
 #ifdef ENABLE_PROVNC_LOGGING
-    printf("------- PASS THROUGH VOL INIT\n");
+    printf("------- PASS THROUGH VOL INIT, id = %d\n", vipl_id);
 #endif
     TOTAL_PROV_OVERHEAD = 0;
     TOTAL_NATIVE_H5_TIME = 0;
@@ -3794,6 +3794,7 @@ H5VL_provenance_file_create(const char *name, unsigned flags, hid_t fcpl_id,
         file->name = new_name;
         file->my_type = H5I_FILE;
         file->generic_prov_info = add_file_node(NULL,name,1);
+        // file->under_vol_id = 
     }
 
 
