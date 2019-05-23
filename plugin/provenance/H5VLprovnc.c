@@ -1921,7 +1921,7 @@ H5VL_provenance_init(hid_t vipl_id)
     DT_LL_TOTAL_TIME = 0;
     ATTR_LL_TOTAL_TIME = 0;
     /* Shut compiler up about unused parameter */
-    vipl_id = vipl_id;
+    // vipl_id = vipl_id;
 
     return 0;
 } /* end H5VL_provenance_init() */
