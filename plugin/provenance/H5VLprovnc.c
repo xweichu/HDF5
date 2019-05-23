@@ -2939,7 +2939,7 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
 
     char **c = calloc(2,sizeof(char*));
     c[0]= new_name;
-    c[1]= dataspace;
+    c[1]= (const char*) dataspace;
 
     hid_t res = H5Sdecode(c[1]);
     printf("res:%d\n",res);
@@ -2948,8 +2948,8 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
     // printf("res:%d\n",res);
     // printf("strlen:%s\n", dataspace);
 
-    printf("size:,%d\n", size);
-    printf("start2:,%d\n", strlen(new_name));
+    // printf("size:,%d\n", size);
+    // printf("start2:,%d\n", strlen(new_name));
 
     under = creat_dataset_1(c, cl);
 
