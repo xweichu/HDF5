@@ -2931,7 +2931,7 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
     H5Sencode2(space_id, md_buf, &size, H5P_DEFAULT);
     char * dataspace = md_buf;
 
-    printf("start:,%x\n", md_buf);
+
     
     CLIENT *cl;
     cl = clnt_create("localhost", HDF5SERVER, HDF5SERVER_V1, "tcp");
@@ -2940,6 +2940,9 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
     char **c = calloc(2,sizeof(char*));
     c[0]= new_name;
     c[1]= dataspace;
+
+    printf("start:,%x\n", dataspace);
+    printf("start2:,%x\n", new_name);
 
     under = creat_dataset_1(c, cl);
 
