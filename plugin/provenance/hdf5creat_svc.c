@@ -72,7 +72,7 @@ hdf5server_1(rqstp, transp)
 {
 	union {
 		char *creat_file_1_arg;
-		char *creat_dataset_1_arg;
+		list creat_dataset_1_arg;
 	} argument;
 	char *result;
 	bool_t (*xdr_argument)(), (*xdr_result)();
@@ -92,7 +92,7 @@ hdf5server_1(rqstp, transp)
 		break;
 
 	case creat_dataset:
-		xdr_argument = xdr_wrapstring;
+		xdr_argument = xdr_list;
 		xdr_result = xdr_int;
 		local = (char *(*)()) creat_dataset_1_svc;
 		break;
