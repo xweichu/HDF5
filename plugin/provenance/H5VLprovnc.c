@@ -2940,7 +2940,7 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
     cl = clnt_create("localhost", HDF5SERVER, HDF5SERVER_V1, "tcp");
     char* new_name = strdup(o->name);
 
-    under = creat_dataset_1(&md_buf, cl);
+    under = creat_dataset_1(&str, cl);
 
 
     // m1 = get_time_usec();
