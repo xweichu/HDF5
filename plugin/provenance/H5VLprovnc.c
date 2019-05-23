@@ -2299,8 +2299,7 @@ H5VL_provenance_get_object(const void *obj)
 static herr_t
 H5VL_provenance_get_wrap_ctx(const void *obj, void **wrap_ctx)
 {
-    // @xweichu
-    return 0;
+ 
     unsigned long start = get_time_usec();
     unsigned long m1, m2;
 
@@ -2310,6 +2309,9 @@ H5VL_provenance_get_wrap_ctx(const void *obj, void **wrap_ctx)
 #ifdef ENABLE_PROVNC_LOGGING
     printf("------- PASS THROUGH VOL WRAP CTX Get\n");
 #endif
+
+    // @xweichu
+    return 0;
 
     assert(o->my_type != 0);
 
@@ -2918,12 +2920,12 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
 #endif
 
     // temporary workaround:
-    // hsize_t     dims[50];
-    // for(int i =0 ;i < 50; i++){
-    //     dims[i] = i+1;
-    // }
+    hsize_t     dims[50];
+    for(int i =0 ;i < 50; i++){
+        dims[i] = i+1;
+    }
 
-    // hid_t dataspace_id = H5Screate_simple(2, dims, NULL);
+    hid_t dataspace_id = H5Screate_simple(2, dims, NULL);
     //size_t size = 0;
     // end of temporary workaround
 
@@ -4145,8 +4147,7 @@ H5VL_provenance_file_optional(void *file, hid_t dxpl_id, void **req,
 static herr_t 
 H5VL_provenance_file_close(void *file, hid_t dxpl_id, void **req)
 {
-    // @xweichu
-    return 0;
+
     unsigned long start = get_time_usec();
     unsigned long m1, m2;
 
@@ -4157,6 +4158,9 @@ H5VL_provenance_file_close(void *file, hid_t dxpl_id, void **req)
     printf("------- PASS THROUGH VOL FILE Close\n");
 #endif
 
+    // @xweichu
+    return 0;
+    
     if(o){
         assert(o->generic_prov_info);
 
