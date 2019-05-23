@@ -45,9 +45,9 @@ int main() {
    H5Sencode2(dataspace_id, NULL, &size, H5P_DEFAULT);
    printf("size is %d \n", size);
 
-   // /* Create the dataset. */
-   // dataset_id = H5Dcreate2(file_id, "/dset2", H5T_STD_I32BE, dataspace_id, 
-   //                        H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+   /* Create the dataset. */
+   dataset_id = H5Dcreate(file_id, "/dset2", H5T_STD_I32BE, dataspace_id, 
+                          H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
    // /* End access to the dataset and release resources used by it. */
    // status = H5Dclose(dataset_id);
