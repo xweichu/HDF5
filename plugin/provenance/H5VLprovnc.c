@@ -38,7 +38,8 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "hdf5.h"
+// #include "hdf5.h"
+#include "/usr/local/hdf5/include/hdf5.h"
 #include "H5VLprovnc.h"
 #include "hdf5creat.h"
 
@@ -2904,8 +2905,7 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
     const char *ds_name, hid_t lcpl_id, hid_t type_id, hid_t space_id,
     hid_t dcpl_id, hid_t dapl_id, hid_t dxpl_id, void **req)
 {
-    unsigned long start = get_time_usec();
-    unsigned long m1, m2;
+
 
     H5VL_provenance_t *dset;
     H5VL_provenance_t *o = (H5VL_provenance_t *)obj;
