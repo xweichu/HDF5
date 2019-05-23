@@ -2310,8 +2310,8 @@ H5VL_provenance_get_wrap_ctx(const void *obj, void **wrap_ctx)
     printf("------- PASS THROUGH VOL WRAP CTX Get\n");
 #endif
 
-    // @xweichu
-    return 0;
+    // // @xweichu
+    // return 0;
 
     assert(o->my_type != 0);
 
