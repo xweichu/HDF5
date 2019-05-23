@@ -2920,8 +2920,8 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
 #endif
 
     // temporary workaround:
-    hsize_t     dims[50];
-    for(int i =0 ;i < 50; i++){
+    hsize_t     dims[2];
+    for(int i =0 ;i < 2; i++){
         dims[i] = i+1;
     }
 
@@ -4160,7 +4160,7 @@ H5VL_provenance_file_close(void *file, hid_t dxpl_id, void **req)
 
     // @xweichu
     return 0;
-    
+
     if(o){
         assert(o->generic_prov_info);
 
