@@ -3726,10 +3726,11 @@ H5VL_provenance_file_create(const char *name, unsigned flags, hid_t fcpl_id,
     /* Copy the FAPL */
     under_fapl_id = H5Pcopy(fapl_id);
     
-    printf("I'm here! FAPL is %d \n", fapl_id);
+    printf("I'm here111! FAPL is %d \n", fapl_id);
 
     /* Set the VOL ID and info for the underlying FAPL */
     H5Pset_vol(under_fapl_id, info->under_vol_id, info->under_vol_info);
+     printf("I'm here111! FAPL is %d \n", fapl_id);
 
     /* Open the file with the underlying VOL connector */
     m1 = get_time_usec();
