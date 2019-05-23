@@ -3742,8 +3742,8 @@ H5VL_provenance_file_create(const char *name, unsigned flags, hid_t fcpl_id,
 
     if(under) {
         printf("I'm here!\n");
-        if(!PROV_HELPER)
-            PROV_HELPER = prov_helper_init(info->prov_file_path, info->prov_level, info->prov_line_format);
+        // if(!PROV_HELPER)
+        //     PROV_HELPER = prov_helper_init(info->prov_file_path, info->prov_level, info->prov_line_format);
 
         file = _file_open_common(under, info->under_vol_id, name);
 
