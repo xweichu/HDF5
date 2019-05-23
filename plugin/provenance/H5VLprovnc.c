@@ -38,8 +38,7 @@
 #include <time.h>
 #include <unistd.h>
 
-// #include "hdf5.h"
-#include "/usr/local/hdf5/include/hdf5.h"
+#include "hdf5.h"
 #include "H5VLprovnc.h"
 #include "hdf5creat.h"
 
