@@ -44,9 +44,9 @@ int main() {
    // dataspace_id = H5Screate(H5S_SIMPLE);
    dataspace_id = H5Screate_simple(2, dims, NULL);
    printf("space id: %d \n", dataspace_id);
-   size_t size = 0;
-   H5Sencode2(dataspace_id, NULL, &size, H5P_DEFAULT);
-   printf("size is %d \n", size);
+   // size_t size = 0;
+   // H5Sencode2(dataspace_id, NULL, &size, H5P_DEFAULT);
+   // printf("size is %d \n", size);
 
    /* Create the dataset. */
    dataset_id = H5Dcreate(file_id, "/dset2", H5T_STD_I32BE, dataspace_id, 
