@@ -2357,6 +2357,7 @@ H5VL_provenance_get_wrap_ctx(const void *obj, void **wrap_ctx)
     // Increment reference count on file info, so it doesn't get freed while
     // we're wrapping objects with it.
     new_wrap_ctx->file_info->ref_cnt++;
+    printf("count %d \n",new_wrap_ctx->file_info->ref_cnt);
 
     /* Increment reference count on underlying VOL ID, and copy the VOL info */
     m1 = get_time_usec();
