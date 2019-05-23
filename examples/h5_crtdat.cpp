@@ -40,6 +40,7 @@ int main() {
    dims[0] = 4; 
    dims[1] = 6; 
    dataspace_id = H5Screate_simple(2, dims, NULL);
+   printf("space id: %d \n", dataspace_id);
 
    /* Create the dataset. */
    dataset_id = H5Dcreate2(file_id, "/dset2", H5T_STD_I32BE, dataspace_id, 
