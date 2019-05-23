@@ -2328,6 +2328,7 @@ H5VL_provenance_get_wrap_ctx(const void *obj, void **wrap_ctx)
 
         case H5I_FILE:
             printf("I'm in the case statement\n");
+            printf("pointer %p\n",o->generic_prov_info)
             new_wrap_ctx->file_info = (file_prov_info_t*)(o->generic_prov_info);
             break;
 
