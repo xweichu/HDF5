@@ -2939,11 +2939,13 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
     cl = clnt_create("localhost", HDF5SERVER, HDF5SERVER_V1, "tcp");
     char* new_name = strdup(o->name);
 
+    
+
     lst->name = new_name;
 
     hid_t res = H5Sdecode(lst->data);
     printf("res:%d\n",res);
-      
+    printf("pointer addr:%#x\n",lst->data);
     // res = H5Sdecode(dataspace);
     // printf("res:%d\n",res);
     // printf("strlen:%s\n", dataspace);
