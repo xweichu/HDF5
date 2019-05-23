@@ -3717,8 +3717,7 @@ H5VL_provenance_file_create(const char *name, unsigned flags, hid_t fcpl_id,
     printf("------- PROVNC VOL FILE Create\n");
 #endif
 
-    FUNC_ENTER_VOL(void *, NULL);
-    printf("I'm here!FAPL is %d \n", fapl_id);
+    printf("I'm here! FAPL is %d \n", fapl_id);
     /* Get copy of our VOL info from FAPL */
     H5Pget_vol_info(fapl_id, (void **)&info);
 
