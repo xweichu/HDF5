@@ -2317,6 +2317,7 @@ H5VL_provenance_get_wrap_ctx(const void *obj, void **wrap_ctx)
 
     /* Allocate new VOL object wrapping context for the pass through connector */
     new_wrap_ctx = (H5VL_provenance_wrap_ctx_t *)calloc(1, sizeof(H5VL_provenance_wrap_ctx_t));
+    printf("tpye:%d\n",o->my_type);
     switch(o->my_type){
         case H5I_DATASET:
         case H5I_GROUP:
