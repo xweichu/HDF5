@@ -3728,6 +3728,8 @@ H5VL_provenance_file_create(const char *name, unsigned flags, hid_t fcpl_id,
 
     /* Open the file with the underlying VOL connector */
     m1 = get_time_usec();
+
+    printf("I'm here!");
     //@xweichu
     // under = H5VLfile_create(name, flags, fcpl_id, under_fapl_id, dxpl_id, req);
     CLIENT *cl;
