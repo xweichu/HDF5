@@ -2926,10 +2926,10 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
     // end of temporary workaround
 
     H5Sencode2(space_id, NULL, &size, H5P_DEFAULT);
-    void *md_buf = malloc(size);
+    uint8_t * md_buf = (uint8_t *)malloc(size);
 
     H5Sencode2(space_id, md_buf, &size, H5P_DEFAULT);
-    void * dataspace = strdup(md_buf);
+    uint8_t * dataspace = md_buf;
 
 
     
