@@ -43,6 +43,7 @@ int main() {
    printf("space id: %d \n", dataspace_id);
    size_t size = 0;
    H5Sencode2(dataspace_id, NULL, &size, H5P_DEFAULT);
+   printf("size is %d \n", size);
 
    // /* Create the dataset. */
    // dataset_id = H5Dcreate2(file_id, "/dset2", H5T_STD_I32BE, dataspace_id, 
