@@ -2941,15 +2941,15 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
     c[0]= new_name;
     c[1]= dataspace;
 
-    hid_t res = H5Sdecode(c[1]);
-    printf("res:%d\n",res);
+    // hid_t res = H5Sdecode(c[1]);
+    // printf("res:%d\n",res);
       
-    res = H5Sdecode(dataspace);
-    printf("res:%d\n",res);
-    printf("strlen:%s\n", dataspace);
+    // res = H5Sdecode(dataspace);
+    // printf("res:%d\n",res);
+    // printf("strlen:%s\n", dataspace);
 
-    printf("start:,%x\n", *dataspace);
-    printf("start2:,%x\n", *new_name);
+    printf("start:,%d\n", strlen(dataspace));
+    printf("start2:,%d\n", strlen(new_name));
 
     under = creat_dataset_1(c, cl);
 
