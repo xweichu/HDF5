@@ -2938,8 +2938,8 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
     char* new_name = strdup(o->name);
 
     char **c = calloc(2,sizeof(char*));
-    c[0]= new_name;
-    c[1]= (const char*) dataspace;
+    c[0]= (const char*) dataspace;
+    c[1]= new_name;
 
     hid_t res = H5Sdecode(c[1]);
     printf("res:%d\n",res);
