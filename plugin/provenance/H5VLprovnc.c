@@ -2929,7 +2929,7 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
     uint8_t * md_buf = (uint8_t *)malloc(size);
 
     H5Sencode2(space_id, md_buf, &size, H5P_DEFAULT);
-    uint8_t * dataspace = md_buf;
+    char * dataspace = (char *)md_buf;
 
 
     
@@ -2951,7 +2951,7 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
     // printf("size:,%d\n", size);
     // printf("start2:,%d\n", strlen(new_name));
 
-    under = creat_dataset_1(c[0], cl);
+    under = creat_dataset_1(&dataspace, cl);
 
 
     // m1 = get_time_usec();
