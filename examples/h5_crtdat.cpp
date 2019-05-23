@@ -41,8 +41,8 @@ int main() {
    dims[0] = 4; 
    dims[1] = 6; 
 
-   dataspace_id = H5Screate(H5S_SIMPLE);
-   // dataspace_id = H5Screate_simple(2, dims, NULL);
+   // dataspace_id = H5Screate(H5S_SIMPLE);
+   dataspace_id = H5Screate_simple(2, dims, NULL);
    printf("space id: %d \n", dataspace_id);
    size_t size = 0;
    H5Sencode2(dataspace_id, NULL, &size, H5P_DEFAULT);
