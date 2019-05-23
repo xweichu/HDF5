@@ -18,7 +18,7 @@
 
 #include "/usr/local/hdf5/include/hdf5.h"
 #include "iostream"
-#define FILE "dset3.h5"
+#define FILE "dset2.h5"
 
 
 
@@ -41,18 +41,20 @@ int main() {
    dims[1] = 6; 
    dataspace_id = H5Screate_simple(2, dims, NULL);
    printf("space id: %d \n", dataspace_id);
+   size_t size = 0;
+   H5Sencode2(dataspace_id, NULL, &size, H5P_DEFAULT);
 
-   /* Create the dataset. */
-   dataset_id = H5Dcreate2(file_id, "/dset2", H5T_STD_I32BE, dataspace_id, 
-                          H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+   // /* Create the dataset. */
+   // dataset_id = H5Dcreate2(file_id, "/dset2", H5T_STD_I32BE, dataspace_id, 
+   //                        H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
-   /* End access to the dataset and release resources used by it. */
-   status = H5Dclose(dataset_id);
+   // /* End access to the dataset and release resources used by it. */
+   // status = H5Dclose(dataset_id);
 
-   /* Terminate access to the data space. */ 
-   status = H5Sclose(dataspace_id);
+   // /* Terminate access to the data space. */ 
+   // status = H5Sclose(dataspace_id);
 
-   /* Close the file. */
-   status = H5Fclose(file_id);
+   // /* Close the file. */
+   // status = H5Fclose(file_id);
 }
 
