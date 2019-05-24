@@ -76,5 +76,5 @@ list * read_dataset_1_svc(list * lst, struct svc_req * req){
     // H5Dclose(dataset_id);
 	// H5Fclose(file_id);
 
-	return res;
+	return NULL;
 }
