@@ -1916,7 +1916,7 @@ H5VL_provenance_init(hid_t vipl_id)
 {
 
 #ifdef ENABLE_PROVNC_LOGGING
-    printf("------- PASS THROUGH VOL INIT, id = %d\n", vipl_id);
+    printf("------- PASS THROUGH VOL INIT\n");
 #endif
     TOTAL_PROV_OVERHEAD = 0;
     TOTAL_NATIVE_H5_TIME = 0;
