@@ -339,8 +339,8 @@ static const H5VL_class_t H5VL_provenance_cls = {
     (H5VL_class_value_t)H5VL_PROVNC_VALUE,        /* value        */
     H5VL_PROVNC_NAME,                             /* name         */
     0,                                            /* capability flags */
-    H5VL_provenance_init,                         /* initialize   */
-    H5VL_provenance_term,                         /* terminate    */
+    NULL,                         /* initialize   */
+    NULL,                         /* terminate    */
     {                                           /* info_cls */
         sizeof(H5VL_provenance_info_t),           /* info size    */
         H5VL_provenance_info_copy,                /* info copy    */
