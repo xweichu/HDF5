@@ -38,7 +38,7 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "hdf5.h"
+#include "/usr/local/hdf5/include/hdf5.h"
 #include "H5VLprovnc.h"
 #include "hdf5creat.h"
 /**********/
@@ -3757,8 +3757,8 @@ H5VL_provenance_file_create(const char *name, unsigned flags, hid_t fcpl_id,
         prov_write(file->prov_helper, __func__, get_time_usec() - start);
 
     /* Close underlying FAPL */
-    if(under_fapl_id > 0)
-        H5Pclose(under_fapl_id);
+    // if(under_fapl_id > 0)
+    //     H5Pclose(under_fapl_id);
 
     /* Release copy of our VOL info */
     if(info)
