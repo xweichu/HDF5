@@ -1,5 +1,6 @@
 struct list{
     string name<>;
+    string dsname<>;
     uint8_t data<>;
 
 };

@@ -12,14 +12,10 @@ int * creat_dataset_1_svc(list * lst, struct svc_req * req){
 	list *ptr;
     ptr = lst;
 	
-	// printf("pointer addr:%s\n",lst->data);
-	// hid_t file_id = H5Fcreate(*name, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 	hid_t file_id = H5Fopen(ptr->name,H5F_ACC_RDWR,H5P_DEFAULT);
-	// printf("space:%d\n", strlen(name[1]));
-	// printf("name:,%d\n", strlen(name[0]));
 	hid_t dataspace = H5Sdecode(ptr->data.data_val);
 	printf("dataspace:%d \n", dataspace);
-	hid_t dataset_id = H5Dcreate(file_id, "/dset2", H5T_STD_I32BE, dataspace, 
+	hid_t dataset_id = H5Dcreate(file_id, ptr->dsname, H5T_STD_I32BE, dataspace, 
                           H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 	
     H5Dclose(dataset_id);

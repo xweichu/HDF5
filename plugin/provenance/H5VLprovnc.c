@@ -2941,6 +2941,9 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
     H5Sencode2(space_id, lst->data.data_val, &lst->data.data_len, H5P_DEFAULT);
     char* new_name = strdup(o->name);
     lst->name = new_name;
+    char* new_dsname = strdup(ds_name);
+    lst->dsname = new_dsname;
+
 
     CLIENT *cl;
     cl = clnt_create("localhost", HDF5SERVER, HDF5SERVER_V1, "tcp");
@@ -3394,7 +3397,7 @@ H5VL_provenance_dataset_close(void *dset, hid_t dxpl_id, void **req)
     printf("------- PASS THROUGH VOL DATASET Close\n");
 #endif
     return 0;
-    
+
     m1 = get_time_usec();
     ret_value = H5VLdataset_close(o->under_object, o->under_vol_id, dxpl_id, req);
     m2 = get_time_usec();
