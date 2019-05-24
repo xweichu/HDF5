@@ -56,13 +56,13 @@ dataset * read_dataset_1_svc(list * lst, struct svc_req * req){
 	printf("len:%d,\n",res.data.data_len);
 	// return (&res);
 	
-	res.data.data_val[0]=99;
+	int * buf = (int*)malloc(5*sizeof(int));
 	
-	// hid_t file_id = H5Fopen(ptr->name,H5F_ACC_RDWR,H5P_DEFAULT);
-	// hid_t dataset_id = H5Dopen2(file_id, ptr->dsname, H5P_DEFAULT);
+	hid_t file_id = H5Fopen(ptr->name,H5F_ACC_RDWR,H5P_DEFAULT);
+	hid_t dataset_id = H5Dopen2(file_id, ptr->dsname, H5P_DEFAULT);
 
-	// H5Dread(dataset_id, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, 
-    //                 (void* )res.data.data_val);
+	H5Dread(dataset_id, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, 
+                    buf);
 
 
 	// res.data[0] = 99;
