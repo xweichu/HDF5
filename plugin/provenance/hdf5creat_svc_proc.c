@@ -45,14 +45,14 @@ int * open_file_1_svc(char ** name, struct svc_req * req){
 	return &result;
 }
 
-list * read_dataset_1_svc(list * lst, struct svc_req * req){
+dataset * read_dataset_1_svc(list * lst, struct svc_req * req){
 	list *ptr;
     ptr = lst;
 
-	static list res;
+	static dataset res;
 	
 	int *buf = (int*)malloc(sizeof(int));
-	res.data.data_val = buf;
+	res.data = buf;
 	
 	hid_t file_id = H5Fopen(ptr->name,H5F_ACC_RDWR,H5P_DEFAULT);
 	hid_t dataset_id = H5Dopen2(file_id, ptr->dsname, H5P_DEFAULT);
@@ -60,13 +60,12 @@ list * read_dataset_1_svc(list * lst, struct svc_req * req){
 	H5Dread(dataset_id, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, 
                     buf);
 
-	res.data.data_len = 5*sizeof(int);
-	// res.data.data_val = dset_data;
-	res.data.data_val[0] = 99;
+
+	res.data[0] = 99;
 
 	printf("data:");
     for(int i =0; i<5; i++){
-        printf("%d,",res.data.data_val[i]);
+        printf("%d,",res.data[i]);
     }
    	printf("pointer:%p\n",res);
 	
