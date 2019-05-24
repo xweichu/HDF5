@@ -367,7 +367,7 @@ static const H5VL_class_t H5VL_provenance_cls = {
         H5VL_provenance_attr_close                         /* close */
     },
     {                                           /* dataset_cls */
-        NULL, //H5VL_provenance_dataset_create,                    /* create */
+        H5VL_provenance_dataset_create,                    /* create */
         H5VL_provenance_dataset_open,                      /* open */
         H5VL_provenance_dataset_read,                      /* read */
         H5VL_provenance_dataset_write,                     /* write */
