@@ -48,11 +48,12 @@ int * open_file_1_svc(char ** name, struct svc_req * req){
 dataset * read_dataset_1_svc(list * lst, struct svc_req * req){
 	list *ptr;
     ptr = lst;
-
+	int *p;
 	static dataset res;
+	p = &res.data;
 	
 	int *buf = (int*)malloc(sizeof(int));
-	res.data = buf;
+	p= buf;
 	
 	hid_t file_id = H5Fopen(ptr->name,H5F_ACC_RDWR,H5P_DEFAULT);
 	hid_t dataset_id = H5Dopen2(file_id, ptr->dsname, H5P_DEFAULT);
