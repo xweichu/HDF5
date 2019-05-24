@@ -49,8 +49,8 @@ int main() {
    // printf("size is %d \n", size);
 
    /* Create the dataset. */
-   dataset_id = H5Dcreate(file_id, "/dset2", H5T_STD_I32BE, dataspace_id, 
-                          H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+   // dataset_id = H5Dcreate(file_id, "/dset2", H5T_STD_I32BE, dataspace_id, 
+   //                        H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
    
    printf("test\n");
