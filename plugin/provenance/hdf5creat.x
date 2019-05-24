@@ -5,7 +5,7 @@ struct list{
 };
 struct dataset{
     int data<>;
-}
+};
 
 program HDF5SERVER{
 
