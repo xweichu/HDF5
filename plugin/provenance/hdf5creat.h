@@ -34,6 +34,15 @@ extern  int * creat_file_1_svc(char **, struct svc_req *);
 #define creat_dataset 2
 extern  int * creat_dataset_1(list *, CLIENT *);
 extern  int * creat_dataset_1_svc(list *, struct svc_req *);
+#define open_dataset 3
+extern  int * open_dataset_1(list *, CLIENT *);
+extern  int * open_dataset_1_svc(list *, struct svc_req *);
+#define open_file 4
+extern  int * open_file_1(char **, CLIENT *);
+extern  int * open_file_1_svc(char **, struct svc_req *);
+#define read_dataset 5
+extern  list * read_dataset_1(list *, CLIENT *);
+extern  list * read_dataset_1_svc(list *, struct svc_req *);
 extern int hdf5server_1_freeresult (SVCXPRT *, xdrproc_t, caddr_t);
 
 #else /* K&R C */
@@ -43,6 +52,15 @@ extern  int * creat_file_1_svc();
 #define creat_dataset 2
 extern  int * creat_dataset_1();
 extern  int * creat_dataset_1_svc();
+#define open_dataset 3
+extern  int * open_dataset_1();
+extern  int * open_dataset_1_svc();
+#define open_file 4
+extern  int * open_file_1();
+extern  int * open_file_1_svc();
+#define read_dataset 5
+extern  list * read_dataset_1();
+extern  list * read_dataset_1_svc();
 extern int hdf5server_1_freeresult ();
 #endif /* K&R C */
 

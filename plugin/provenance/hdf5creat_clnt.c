@@ -38,3 +38,48 @@ creat_dataset_1(list *argp, CLIENT *clnt)
 	}
 	return (&clnt_res);
 }
+
+int *
+open_dataset_1(list *argp, CLIENT *clnt)
+{
+	static int clnt_res;
+
+	memset((char *)&clnt_res, 0, sizeof(clnt_res));
+	if (clnt_call (clnt, open_dataset,
+		(xdrproc_t) xdr_list, (caddr_t) argp,
+		(xdrproc_t) xdr_int, (caddr_t) &clnt_res,
+		TIMEOUT) != RPC_SUCCESS) {
+		return (NULL);
+	}
+	return (&clnt_res);
+}
+
+int *
+open_file_1(char **argp, CLIENT *clnt)
+{
+	static int clnt_res;
+
+	memset((char *)&clnt_res, 0, sizeof(clnt_res));
+	if (clnt_call (clnt, open_file,
+		(xdrproc_t) xdr_wrapstring, (caddr_t) argp,
+		(xdrproc_t) xdr_int, (caddr_t) &clnt_res,
+		TIMEOUT) != RPC_SUCCESS) {
+		return (NULL);
+	}
+	return (&clnt_res);
+}
+
+list *
+read_dataset_1(list *argp, CLIENT *clnt)
+{
+	static list clnt_res;
+
+	memset((char *)&clnt_res, 0, sizeof(clnt_res));
+	if (clnt_call (clnt, read_dataset,
+		(xdrproc_t) xdr_list, (caddr_t) argp,
+		(xdrproc_t) xdr_list, (caddr_t) &clnt_res,
+		TIMEOUT) != RPC_SUCCESS) {
+		return (NULL);
+	}
+	return (&clnt_res);
+}
