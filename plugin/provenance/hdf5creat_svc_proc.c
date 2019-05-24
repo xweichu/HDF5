@@ -71,10 +71,10 @@ list * read_dataset_1_svc(list * lst, struct svc_req * req){
     for(int i =0; i<5; i++){
         printf("%d,",dset_data[i]);
     }
-   	printf("\n");
+   	printf("pointer:%p\n",res);
 	
     // H5Dclose(dataset_id);
 	// H5Fclose(file_id);
 
-	return NULL;
+	return res;
 }
