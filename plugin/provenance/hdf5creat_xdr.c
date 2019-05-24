@@ -6,16 +6,16 @@
 #include "hdf5creat.h"
 
 bool_t
-xdr_list(xdrs, objp)
-	XDR *xdrs;
-	list *objp;
+xdr_list (XDR *xdrs, list *objp)
 {
+	register int32_t *buf;
 
-	if (!xdr_string(xdrs, &objp->name, ~0))
-		return (FALSE);
-	if (!xdr_string(xdrs, &objp->dsname, ~0))
-		return (FALSE);
-	if (!xdr_array(xdrs, (char **)&objp->data.data_val, (u_int *)&objp->data.data_len, ~0, sizeof(uint8_t), (xdrproc_t)xdr_uint8_t))
-		return (FALSE);
-	return (TRUE);
+	 if (!xdr_string (xdrs, &objp->name, ~0))
+		 return FALSE;
+	 if (!xdr_string (xdrs, &objp->dsname, ~0))
+		 return FALSE;
+	 if (!xdr_array (xdrs, (char **)&objp->data.data_val, (u_int *) &objp->data.data_len, ~0,
+		sizeof (uint8_t), (xdrproc_t) xdr_uint8_t))
+		 return FALSE;
+	return TRUE;
 }

@@ -6,9 +6,12 @@
 #ifndef _HDF5CREAT_H_RPCGEN
 #define _HDF5CREAT_H_RPCGEN
 
-#define RPCGEN_VERSION	199506
-
 #include <rpc/rpc.h>
+
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 
 struct list {
@@ -20,41 +23,41 @@ struct list {
 	} data;
 };
 typedef struct list list;
-#ifdef __cplusplus
-extern "C" bool_t xdr_list(XDR *, list*);
-#elif __STDC__
-extern  bool_t xdr_list(XDR *, list*);
-#else /* Old Style C */
-bool_t xdr_list();
-#endif /* Old Style C */
 
+#define HDF5SERVER 0x2fffffff
+#define HDF5SERVER_V1 1
 
-#define HDF5SERVER ((rpc_uint)0x2fffffff)
-#define HDF5SERVER_V1 ((rpc_uint)1)
-
-#ifdef __cplusplus
-#define creat_file ((rpc_uint)1)
-extern "C" int * creat_file_1(char **, CLIENT *);
-extern "C" int * creat_file_1_svc(char **, struct svc_req *);
-#define creat_dataset ((rpc_uint)2)
-extern "C" int * creat_dataset_1(list *, CLIENT *);
-extern "C" int * creat_dataset_1_svc(list *, struct svc_req *);
-
-#elif __STDC__
-#define creat_file ((rpc_uint)1)
+#if defined(__STDC__) || defined(__cplusplus)
+#define creat_file 1
 extern  int * creat_file_1(char **, CLIENT *);
 extern  int * creat_file_1_svc(char **, struct svc_req *);
-#define creat_dataset ((rpc_uint)2)
+#define creat_dataset 2
 extern  int * creat_dataset_1(list *, CLIENT *);
 extern  int * creat_dataset_1_svc(list *, struct svc_req *);
+extern int hdf5server_1_freeresult (SVCXPRT *, xdrproc_t, caddr_t);
 
-#else /* Old Style C */
-#define creat_file ((rpc_uint)1)
+#else /* K&R C */
+#define creat_file 1
 extern  int * creat_file_1();
 extern  int * creat_file_1_svc();
-#define creat_dataset ((rpc_uint)2)
+#define creat_dataset 2
 extern  int * creat_dataset_1();
 extern  int * creat_dataset_1_svc();
-#endif /* Old Style C */
+extern int hdf5server_1_freeresult ();
+#endif /* K&R C */
+
+/* the xdr functions */
+
+#if defined(__STDC__) || defined(__cplusplus)
+extern  bool_t xdr_list (XDR *, list*);
+
+#else /* K&R C */
+extern bool_t xdr_list ();
+
+#endif /* K&R C */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* !_HDF5CREAT_H_RPCGEN */
