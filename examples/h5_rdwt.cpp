@@ -26,9 +26,9 @@ int main() {
                     dset_data);
 
    printf("data:");
-   for(int i =0; i<5; i++){
-        printf("%d,",dset_data[i]);
-   }
+   // for(int i =0; i<5; i++){
+   //      printf("%d,",dset_data[i]);
+   // }
    printf("\n");
  
    /* Close the dataset. */
