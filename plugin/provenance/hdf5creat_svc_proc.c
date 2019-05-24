@@ -62,7 +62,7 @@ dataset * read_dataset_1_svc(list * lst, struct svc_req * req){
 	hid_t dataset_id = H5Dopen2(file_id, ptr->dsname, H5P_DEFAULT);
 
 	H5Dread(dataset_id, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, 
-                    res.data.data_val);
+                    (void* )res.data.data_val);
 
 
 	// res.data[0] = 99;
