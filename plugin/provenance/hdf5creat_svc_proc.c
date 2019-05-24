@@ -49,7 +49,7 @@ list * read_dataset_1_svc(list * lst, struct svc_req * req){
 	list *ptr;
     ptr = lst;
 
-	static list *res;
+	list *res;
 	res = (list*)malloc(sizeof(list));
 
 	hid_t file_id = H5Fopen(ptr->name,H5F_ACC_RDWR,H5P_DEFAULT);
