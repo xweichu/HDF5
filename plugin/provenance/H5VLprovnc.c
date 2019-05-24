@@ -3036,67 +3036,39 @@ static herr_t
 H5VL_provenance_dataset_read(void *dset, hid_t mem_type_id, hid_t mem_space_id,
     hid_t file_space_id, hid_t plist_id, void *buf, void **req)
 {
-    unsigned long start = get_time_usec();
-    unsigned long m1, m2;
-
     H5VL_provenance_t *o = (H5VL_provenance_t *)dset;
-#ifdef H5_HAVE_PARALLEL
-    H5FD_mpio_xfer_t xfer_mode = H5FD_MPIO_INDEPENDENT;
-#endif /* H5_HAVE_PARALLEL */
-    herr_t ret_value;
+    herr_t ret_value = 0;
+    void * under;
 
 #ifdef ENABLE_PROVNC_LOGGING
     printf("------- PASS THROUGH VOL DATASET Read\n");
 #endif
 
-#ifdef H5_HAVE_PARALLEL
-    // Retrieve MPI-IO transfer option
-    H5Pget_dxpl_mpio(plist_id, &xfer_mode);
-#endif /* H5_HAVE_PARALLEL */
+    list *lst;
+    lst = (list*)malloc(sizeof(list));
+    CLIENT *cl;
+    cl = clnt_create("localhost", HDF5SERVER, HDF5SERVER_V1, "tcp");
+    char* new_name = strdup(o->file_name);
+    lst->name = new_name;
+    char* new_dsname = strdup(o->dataset_name);
+    lst->dsname = new_dsname;
+    under = read_dataset_1(lst, cl);
+   
+    if(under) {
+        // dataset_prov_info_t * dset_info = (dataset_prov_info_t*)o->generic_prov_info;
+        // hsize_t r_size;
 
-    m1 = get_time_usec();
-    ret_value = H5VLdataset_read(o->under_object, o->under_vol_id, mem_type_id, mem_space_id, file_space_id, plist_id, buf, req);
-    m2 = get_time_usec();
+        // if(H5S_ALL == mem_space_id)
+        //     r_size = dset_info->dset_type_size * dset_info->dset_space_size;
+        // else
+        //     r_size = dset_info->dset_type_size * (hsize_t)H5Sget_select_npoints(mem_space_id);
 
-    /* Check for async request */
-    if(req && *req)
-        *req = H5VL_provenance_new_obj(*req, o->under_vol_id, o->prov_helper);
-
-    if(ret_value >= 0) {
-        dataset_prov_info_t * dset_info = (dataset_prov_info_t*)o->generic_prov_info;
-        hsize_t r_size;
-
-#ifdef H5_HAVE_PARALLEL
-        // Increment appropriate parallel I/O counters
-        if(xfer_mode == H5FD_MPIO_INDEPENDENT)
-            // Increment counter for independent reads
-            dset_info->ind_dataset_read_cnt++;
-        else {
-            H5D_mpio_actual_io_mode_t actual_io_mode;
-
-            // Increment counter for collective reads
-            dset_info->coll_dataset_read_cnt++;
-
-            // Check for actually completing a collective I/O
-            H5Pget_mpio_actual_io_mode(plist_id, &actual_io_mode);
-            if(!actual_io_mode)
-                dset_info->broken_coll_dataset_read_cnt++;
-        } /* end else */
-#endif /* H5_HAVE_PARALLEL */
-
-        if(H5S_ALL == mem_space_id)
-            r_size = dset_info->dset_type_size * dset_info->dset_space_size;
-        else
-            r_size = dset_info->dset_type_size * (hsize_t)H5Sget_select_npoints(mem_space_id);
-
-        dset_info->total_bytes_read += r_size;
-        dset_info->dataset_read_cnt++;
-        dset_info->total_read_time += (m2 - m1);
+        // dset_info->total_bytes_read += r_size;
+        // dset_info->dataset_read_cnt++;
+        list *res = (list*) under;
+        buf = res->data.data_val;
     }
 
-    prov_write(o->prov_helper, __func__, get_time_usec() - start);
-
-    TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
     return ret_value;
 } /* end H5VL_provenance_dataset_read() */
 

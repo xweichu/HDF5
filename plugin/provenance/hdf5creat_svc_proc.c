@@ -46,6 +46,21 @@ int * open_file_1_svc(char ** name, struct svc_req * req){
 }
 
 list * read_dataset_1_svc(list * lst, struct svc_req * req){
+	list *ptr;
+    ptr = lst;
 
-	return NULL;
+	static list *res;
+	res = (list*)malloc(sizeof(list));
+
+	hid_t file_id = H5Fopen(ptr->name,H5F_ACC_RDWR,H5P_DEFAULT);
+	hid_t dataset_id = H5Dopen2(file_id, ptr->dsname, H5P_DEFAULT);
+
+	uint8_t* dset_data = (uint8_t*)malloc(5*sizeof(int));
+	H5Dread(dataset_id, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, 
+                    dset_data);
+	
+    H5Dclose(dataset_id);
+	H5Fclose(file_id);
+
+	return ptr;
 }
