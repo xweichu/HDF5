@@ -67,12 +67,12 @@ list * read_dataset_1_svc(list * lst, struct svc_req * req){
 
 	printf("data:");
     for(int i =0; i<5; i++){
-        printf("%d,",dset_data[i]);
+        printf("%d,",res.data.data_val[i]);
     }
    	printf("pointer:%p\n",res);
 	
     // H5Dclose(dataset_id);
 	// H5Fclose(file_id);
 
-	return res;
+	return &res;
 }
