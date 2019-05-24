@@ -50,7 +50,8 @@ dataset * read_dataset_1_svc(list * lst, struct svc_req * req){
     ptr = lst;
 	int *p;
 	static dataset res;
-	res.data.data_len=5;
+	
+	printf("len:%d,\n",res.data.data_len);
 	return &res;
 	
 
