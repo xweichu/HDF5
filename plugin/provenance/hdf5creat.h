@@ -24,6 +24,14 @@ struct list {
 };
 typedef struct list list;
 
+struct dataset {
+	struct {
+		u_int data_len;
+		int *data_val;
+	} data;
+};
+typedef struct dataset dataset;
+
 #define HDF5SERVER 0x2fffffff
 #define HDF5SERVER_V1 1
 
@@ -41,8 +49,8 @@ extern  int * open_dataset_1_svc(list *, struct svc_req *);
 extern  int * open_file_1(char **, CLIENT *);
 extern  int * open_file_1_svc(char **, struct svc_req *);
 #define read_dataset 5
-extern  list * read_dataset_1(list *, CLIENT *);
-extern  list * read_dataset_1_svc(list *, struct svc_req *);
+extern  dataset * read_dataset_1(list *, CLIENT *);
+extern  dataset * read_dataset_1_svc(list *, struct svc_req *);
 extern int hdf5server_1_freeresult (SVCXPRT *, xdrproc_t, caddr_t);
 
 #else /* K&R C */
@@ -59,8 +67,8 @@ extern  int * open_dataset_1_svc();
 extern  int * open_file_1();
 extern  int * open_file_1_svc();
 #define read_dataset 5
-extern  list * read_dataset_1();
-extern  list * read_dataset_1_svc();
+extern  dataset * read_dataset_1();
+extern  dataset * read_dataset_1_svc();
 extern int hdf5server_1_freeresult ();
 #endif /* K&R C */
 
@@ -68,9 +76,11 @@ extern int hdf5server_1_freeresult ();
 
 #if defined(__STDC__) || defined(__cplusplus)
 extern  bool_t xdr_list (XDR *, list*);
+extern  bool_t xdr_dataset (XDR *, dataset*);
 
 #else /* K&R C */
 extern bool_t xdr_list ();
+extern bool_t xdr_dataset ();
 
 #endif /* K&R C */
 

@@ -19,3 +19,14 @@ xdr_list (XDR *xdrs, list *objp)
 		 return FALSE;
 	return TRUE;
 }
+
+bool_t
+xdr_dataset (XDR *xdrs, dataset *objp)
+{
+	register int32_t *buf;
+
+	 if (!xdr_array (xdrs, (char **)&objp->data.data_val, (u_int *) &objp->data.data_len, ~0,
+		sizeof (int), (xdrproc_t) xdr_int))
+		 return FALSE;
+	return TRUE;
+}

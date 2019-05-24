@@ -61,7 +61,7 @@ hdf5server_1(struct svc_req *rqstp, register SVCXPRT *transp)
 
 	case read_dataset:
 		_xdr_argument = (xdrproc_t) xdr_list;
-		_xdr_result = (xdrproc_t) xdr_list;
+		_xdr_result = (xdrproc_t) xdr_dataset;
 		local = (char *(*)(char *, struct svc_req *)) read_dataset_1_svc;
 		break;
 
