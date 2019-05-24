@@ -2504,7 +2504,7 @@ H5VL_provenance_free_wrap_ctx(void *_wrap_ctx)
     printf("------- PASS THROUGH VOL WRAP CTX Free\n");
 #endif
     return 0;
-    
+
     err_id = H5Eget_current_stack();
 
     // Release hold on underlying file_info
@@ -2934,6 +2934,9 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
     }
     else
         dset = NULL;
+    
+    free(lst->data.data_val);
+    free(lst);
 
     return (void *)dset;
 } /* end H5VL_provenance_dataset_create() */
