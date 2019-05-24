@@ -54,7 +54,7 @@ dataset * read_dataset_1_svc(list * lst, struct svc_req * req){
 	
 	res.data.data_val = (int*)malloc(5*sizeof(int));
 	printf("len:%d,\n",res.data.data_len);
-	return (&res);
+	// return (&res);
 	
 	
 	
