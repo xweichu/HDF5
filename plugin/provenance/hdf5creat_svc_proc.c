@@ -50,6 +50,7 @@ dataset * read_dataset_1_svc(list * lst, struct svc_req * req){
     ptr = lst;
 	int *p;
 	static dataset res;
+	return &res;
 
 	p = res.data.data_val;
 
