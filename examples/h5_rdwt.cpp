@@ -22,9 +22,15 @@ int main() {
 //    status = H5Dwrite(dataset_id, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, 
 //                      dset_data);
 
-   // status = H5Dread(dataset_id, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, 
-                  //   dset_data);
+   status = H5Dread(dataset_id, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, 
+                    dset_data);
 
+   printf("data:");
+   for(int i =0; i<5; i++){
+        printf("%d,",dset_data[i]);
+   }
+   printf("\n");
+ 
    /* Close the dataset. */
    status = H5Dclose(dataset_id);
 
