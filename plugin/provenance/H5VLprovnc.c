@@ -339,8 +339,8 @@ static const H5VL_class_t H5VL_provenance_cls = {
     (H5VL_class_value_t)H5VL_PROVNC_VALUE,        /* value        */
     H5VL_PROVNC_NAME,                             /* name         */
     0,                                            /* capability flags */
-    NULL,                         /* initialize   */
-    NULL,                         /* terminate    */
+    H5VL_provenance_init,                         /* initialize   */
+    H5VL_provenance_term,                         /* terminate    */
     {                                           /* info_cls */
         sizeof(H5VL_provenance_info_t),           /* info size    */
         H5VL_provenance_info_copy,                /* info copy    */
@@ -3719,20 +3719,10 @@ H5VL_provenance_file_create(const char *name, unsigned flags, hid_t fcpl_id,
     /* Get copy of our VOL info from FAPL */
     H5Pget_vol_info(fapl_id, (void **)&info);
 
-    /* Copy the FAPL */
-    // under_fapl_id = H5Pcopy(fapl_id);
-
-    /* Set the VOL ID and info for the underlying FAPL */
-    //@xweichu this causes some problems.
-    // H5Pset_vol(under_fapl_id, info->under_vol_id, info->under_vol_info);
- 
-
     /* Open the file with the underlying VOL connector */
     m1 = get_time_usec();
 
-
     //@xweichu
-    // under = H5VLfile_create(name, flags, fcpl_id, under_fapl_id, dxpl_id, req);
     CLIENT *cl;
     cl = clnt_create("localhost", HDF5SERVER, HDF5SERVER_V1, "tcp");
     char* new_name = strdup(name);
@@ -3743,7 +3733,7 @@ H5VL_provenance_file_create(const char *name, unsigned flags, hid_t fcpl_id,
         file = malloc(sizeof(H5VL_provenance_t));
         file->my_type= H5E_FILE;
         file->name = name;
-    } /* end if */
+    } 
     else
         file = NULL;
 
@@ -3752,8 +3742,9 @@ H5VL_provenance_file_create(const char *name, unsigned flags, hid_t fcpl_id,
         H5VL_provenance_info_free(info);
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
-    printf("total overhead:%d",TOTAL_PROV_OVERHEAD);
+
     return (void *)file;
+    
 } /* end H5VL_provenance_file_create() */
 
 
