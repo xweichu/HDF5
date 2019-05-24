@@ -2519,6 +2519,7 @@ H5VL_provenance_free_wrap_ctx(void *_wrap_ctx)
     printf("------- PASS THROUGH VOL WRAP CTX Free\n");
 #endif
 
+    return 0;
     err_id = H5Eget_current_stack();
 
     // Release hold on underlying file_info
