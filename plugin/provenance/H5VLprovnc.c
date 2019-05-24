@@ -2936,9 +2936,12 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
 
     list *lst;
     lst = (list*)malloc(sizeof(list));
-    H5Sencode2(space_id, NULL, &lst->data.data_len, H5P_DEFAULT);
-    lst->data.data_val = (char *)malloc(lst->data.data_len);
-    H5Sencode2(space_id, lst->data.data_val, &lst->data.data_len, H5P_DEFAULT);
+    size_t size = 0;
+    
+    H5Sencode2(space_id, NULL, &size, H5P_DEFAULT);
+    lst->data.data_val = (char *)malloc(size);
+    H5Sencode2(space_id, lst->data.data_val, &size, H5P_DEFAULT);
+    lst->data.data_len = (u_int)size;
     char* new_name = strdup(o->name);
     lst->name = new_name;
     char* new_dsname = strdup(ds_name);
