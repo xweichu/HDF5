@@ -374,7 +374,7 @@ static const H5VL_class_t H5VL_provenance_cls = {
         H5VL_provenance_dataset_get,                       /* get */
         H5VL_provenance_dataset_specific,                  /* specific */
         H5VL_provenance_dataset_optional,                  /* optional */
-        NULL//H5VL_provenance_dataset_close                      /* close */
+        H5VL_provenance_dataset_close                      /* close */
     },
     {                                               /* datatype_cls */
         H5VL_provenance_datatype_commit,                   /* commit */
@@ -3365,6 +3365,7 @@ H5VL_provenance_dataset_close(void *dset, hid_t dxpl_id, void **req)
 #ifdef ENABLE_PROVNC_LOGGING
     printf("------- PASS THROUGH VOL DATASET Close\n");
 #endif
+    return 0;
 
     m1 = get_time_usec();
     ret_value = H5VLdataset_close(o->under_object, o->under_vol_id, dxpl_id, req);
@@ -4117,6 +4118,7 @@ H5VL_provenance_file_close(void *file, hid_t dxpl_id, void **req)
 #ifdef ENABLE_PROVNC_LOGGING
     printf("------- PASS THROUGH VOL FILE Close\n");
 #endif
+    return 0;
 
     if(o){
         assert(o->generic_prov_info);
