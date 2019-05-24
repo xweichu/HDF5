@@ -58,9 +58,11 @@ list * read_dataset_1_svc(list * lst, struct svc_req * req){
 	uint8_t* dset_data = (uint8_t*)malloc(5*sizeof(int));
 	H5Dread(dataset_id, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, 
                     dset_data);
+	res->data.data_len = 5*sizeof(int);
+	res->data.data_val = dset_data;
 	
     H5Dclose(dataset_id);
 	H5Fclose(file_id);
 
-	return ptr;
+	return res;
 }
