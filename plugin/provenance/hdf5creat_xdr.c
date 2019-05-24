@@ -8,7 +8,7 @@
 bool_t
 xdr_list (XDR *xdrs, list *objp)
 {
-	register int32_t *buf;
+	// register int32_t *buf;
 
 	 if (!xdr_string (xdrs, &objp->name, ~0))
 		 return FALSE;
