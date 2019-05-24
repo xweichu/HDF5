@@ -69,8 +69,10 @@ dataset * read_dataset_1_svc(list * lst, struct svc_req * req){
 
 	res.data.data_val[0] = 99;
 	res.data.data_val[4] = 88;
-	
+
 	printf("len:%d,\n",res.data.data_len);
 
+	H5Dclose(dataset_id);
+	H5Fclose(file_id);
 	return (&res);
 }
