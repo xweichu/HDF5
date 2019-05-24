@@ -53,19 +53,17 @@ list * read_dataset_1_svc(list * lst, struct svc_req * req){
 
 	char* new_name = strdup(ptr->name);
 	char* new_dsname = strdup(ptr->dsname);
-	res->name = new_name;
-	res->dsname = new_dsname;
 
 	hid_t file_id = H5Fopen(ptr->name,H5F_ACC_RDWR,H5P_DEFAULT);
 	hid_t dataset_id = H5Dopen2(file_id, ptr->dsname, H5P_DEFAULT);
 
-	int* dset_data = (int*)malloc(5*sizeof(int));
+	// int* dset_data = (int*)malloc(5*sizeof(int));
 	H5Dread(dataset_id, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, 
-                    dset_data);
+                    res.data.data_val);
 
-	res->data.data_len = 5*sizeof(int);
-	res->data.data_val = dset_data;
-	res->data.data_val[0] = 99;
+	res.data.data_len = 5*sizeof(int);
+	// res.data.data_val = dset_data;
+	res.data.data_val[0] = 99;
 
 	printf("data:");
     for(int i =0; i<5; i++){
