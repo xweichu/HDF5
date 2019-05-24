@@ -56,7 +56,7 @@ list * read_dataset_1_svc(list * lst, struct svc_req * req){
 	hid_t dataset_id = H5Dopen2(file_id, ptr->dsname, H5P_DEFAULT);
 
 	res.data.data_val = buf;
-	rintf("pointer:%p\n",buf);
+	printf("pointer:%p\n",buf);
 	H5Dread(dataset_id, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, 
                     res.data.data_val);
 
