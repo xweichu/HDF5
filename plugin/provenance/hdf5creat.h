@@ -13,6 +13,7 @@
 
 struct list {
 	char *name;
+	char *dsname;
 	struct {
 		u_int data_len;
 		uint8_t *data_val;
