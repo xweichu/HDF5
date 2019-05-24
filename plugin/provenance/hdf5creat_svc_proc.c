@@ -64,6 +64,9 @@ dataset * read_dataset_1_svc(list * lst, struct svc_req * req){
 	H5Dread(dataset_id, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, 
                     buf);
 
+	for(int i=0; i<5; i++){
+		res.data.data_val[i] = buf[i];
+	}
 
 	// res.data[0] = 99;
 
