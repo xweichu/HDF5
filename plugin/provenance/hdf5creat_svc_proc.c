@@ -67,8 +67,8 @@ list * read_dataset_1_svc(list * lst, struct svc_req * req){
     }
    	printf("\n");
 	
-    H5Dclose(dataset_id);
-	H5Fclose(file_id);
+    // H5Dclose(dataset_id);
+	// H5Fclose(file_id);
 
 	return res;
 }
