@@ -3737,9 +3737,6 @@ static void *
 H5VL_provenance_file_create(const char *name, unsigned flags, hid_t fcpl_id,
     hid_t fapl_id, hid_t dxpl_id, void **req)
 {
-    unsigned long start = get_time_usec();
-    unsigned long m1, m2;
-
     H5VL_provenance_info_t *info = NULL;
     H5VL_provenance_t *file;
     hid_t under_fapl_id = -1;
@@ -3749,9 +3746,7 @@ H5VL_provenance_file_create(const char *name, unsigned flags, hid_t fcpl_id,
     printf("------- PROVNC VOL FILE Create\n");
 #endif
 
-
     // @xweichu
-    // printf("test before connection\n");
     CLIENT *cl;
     cl = clnt_create("localhost", HDF5SERVER, HDF5SERVER_V1, "tcp");
     char* new_name = strdup(name);
@@ -3761,12 +3756,7 @@ H5VL_provenance_file_create(const char *name, unsigned flags, hid_t fcpl_id,
         file = (H5VL_provenance_t *)calloc(1, sizeof(H5VL_provenance_t));
         file->name = new_name;
         file->my_type = H5I_FILE;
-        file->generic_prov_info = add_file_node(NULL,name,1);
-        file->under_vol_id = 509; 
     }
-
-
-    // printf(file->name);
 
     return file;
 } /* end H5VL_provenance_file_create() */
