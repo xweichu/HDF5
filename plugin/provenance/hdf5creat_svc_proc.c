@@ -62,13 +62,13 @@ dataset * read_dataset_1_svc(list * lst, struct svc_req * req){
                     buf);
 
 
-	res.data[0] = 99;
+	// res.data[0] = 99;
 
-	printf("data:");
-    for(int i =0; i<5; i++){
-        printf("%d,",res.data[i]);
-    }
-   	printf("pointer:%p\n",res);
+	// printf("data:");
+    // for(int i =0; i<5; i++){
+    //     printf("%d,",res.data[i]);
+    // }
+   	// printf("pointer:%p\n",res);
 	
     // H5Dclose(dataset_id);
 	// H5Fclose(file_id);
