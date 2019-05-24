@@ -351,10 +351,10 @@ static const H5VL_class_t H5VL_provenance_cls = {
         H5VL_provenance_str_to_info,              /* str to info  */
     },
     {                                           /* wrap_cls */
-        H5VL_provenance_get_object,               /* get_object   */
-        H5VL_provenance_get_wrap_ctx,             /* get_wrap_ctx */
-        H5VL_provenance_wrap_object,              /* wrap_object  */
-        H5VL_provenance_unwrap_object,            /* unwrap_object  */
+        NULL, //H5VL_provenance_get_object,               /* get_object   */
+        NULL, //H5VL_provenance_get_wrap_ctx,             /* get_wrap_ctx */
+        NULL, //H5VL_provenance_wrap_object,              /* wrap_object  */
+        NULL, //H5VL_provenance_unwrap_object,            /* unwrap_object  */
         H5VL_provenance_free_wrap_ctx,            /* free_wrap_ctx */
     },
     {                                           /* attribute_cls */
