@@ -44,3 +44,8 @@ int * open_file_1_svc(char ** name, struct svc_req * req){
 	static int result = 0;
 	return &result;
 }
+
+list * read_dataset_1_svc(list * lst, struct svc_req * req){
+
+	return NULL;
+}
