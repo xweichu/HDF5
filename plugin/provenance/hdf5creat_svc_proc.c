@@ -49,8 +49,7 @@ list * read_dataset_1_svc(list * lst, struct svc_req * req){
 	list *ptr;
     ptr = lst;
 
-	list *res;
-	res = (list*)malloc(sizeof(list));
+	static list res;
 
 	char* new_name = strdup(ptr->name);
 	char* new_dsname = strdup(ptr->dsname);
