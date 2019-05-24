@@ -3004,7 +3004,7 @@ H5VL_provenance_dataset_open(void *obj, const H5VL_loc_params_t *loc_params,
     lst->name = new_name;
     char* new_dsname = strdup(ds_name);
     lst->dsname = new_dsname;
-    under = read_dataset_1(lst, cl);
+    under = open_dataset_1(lst, cl);
 
     if((int*)under == 0){
         dset = (H5VL_provenance_t*)malloc(sizeof(H5VL_provenance_t));
@@ -3017,7 +3017,7 @@ H5VL_provenance_dataset_open(void *obj, const H5VL_loc_params_t *loc_params,
 
     free(lst->data.data_val);
     free(lst);
-    
+
     return (void *)dset;
 } /* end H5VL_provenance_dataset_open() */
 

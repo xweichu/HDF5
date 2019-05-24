@@ -25,7 +25,7 @@ int * creat_dataset_1_svc(list * lst, struct svc_req * req){
 	return &result;
 }
 
-int * read_dataset_1_svc(list * lst, struct svc_req * req){
+int * open_dataset_1_svc(list * lst, struct svc_req * req){
 	list *ptr;
     ptr = lst;
 	
