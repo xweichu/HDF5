@@ -52,7 +52,7 @@ dataset * read_dataset_1_svc(list * lst, struct svc_req * req){
 	static dataset res;
 	res.data.data_len = 5;
 	printf("len:%d,\n",res.data.data_len);
-	return &res;
+	return (&res);
 	
 
 	p = (int*)malloc(5*sizeof(int));
