@@ -390,7 +390,7 @@ static const H5VL_class_t H5VL_provenance_cls = {
         H5VL_provenance_file_get,                          /* get */
         H5VL_provenance_file_specific,                     /* specific */
         H5VL_provenance_file_optional,                     /* optional */
-        H5VL_provenance_file_close                         /* close */
+        NULL //H5VL_provenance_file_close                         /* close */
     },
     {                                           /* group_cls */
         H5VL_provenance_group_create,                      /* create */
