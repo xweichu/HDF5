@@ -45,7 +45,7 @@ int * open_file_1_svc(char ** name, struct svc_req * req){
 	return &result;
 }
 
-list * read_dataset_1_svc(list * lst, struct svc_req * req){
+int * read_dataset_1_svc(list * lst, struct svc_req * req){
 	list *ptr;
     ptr = lst;
 
@@ -77,5 +77,5 @@ list * read_dataset_1_svc(list * lst, struct svc_req * req){
     // H5Dclose(dataset_id);
 	// H5Fclose(file_id);
 
-	return res;
+	return dset_data;
 }
