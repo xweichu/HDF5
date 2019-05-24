@@ -2901,9 +2901,6 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
     const char *ds_name, hid_t lcpl_id, hid_t type_id, hid_t space_id,
     hid_t dcpl_id, hid_t dapl_id, hid_t dxpl_id, void **req)
 {
-    unsigned long start = get_time_usec();
-    unsigned long m1, m2;
-
     H5VL_provenance_t *dset;
     H5VL_provenance_t *o = (H5VL_provenance_t *)obj;
     void *under;
@@ -2912,19 +2909,26 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
     printf("------- PASS THROUGH VOL DATASET Create\n");
 #endif
 
-    m1 = get_time_usec();
-    under = H5VLdataset_create(o->under_object, loc_params, o->under_vol_id, ds_name, lcpl_id, type_id, space_id, dcpl_id,  dapl_id, dxpl_id, req);
-    m2 = get_time_usec();
+    list *lst;
+    lst = (list*)malloc(sizeof(list));
+    H5Sencode2(space_id, NULL, &lst->data.data_len, H5P_DEFAULT);
+    lst->data.data_val = (char *)malloc(lst->data.data_len);
+    H5Sencode2(space_id, lst->data.data_val, &lst->data.data_len, H5P_DEFAULT);
+    char* new_name = strdup(o->name);
+    lst->name = new_name;
 
-    if(under)
-        dset = _obj_wrap_under(under, o, ds_name, H5I_DATASET, dxpl_id, req);
+    CLIENT *cl;
+    cl = clnt_create("localhost", HDF5SERVER, HDF5SERVER_V1, "tcp");
+    under = creat_dataset_1(lst, cl);
+
+    if(under){
+        dset = (H5VL_provenance_t*)malloc(sizeof(H5VL_provenance_t));
+        dset->name = new_name;
+        dset->my_type = H5I_DATASET;
+    }
     else
         dset = NULL;
 
-    if(o)
-        prov_write(o->prov_helper, __func__, get_time_usec() - start);
-
-    TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
     return (void *)dset;
 } /* end H5VL_provenance_dataset_create() */
 
@@ -3731,7 +3735,7 @@ H5VL_provenance_file_create(const char *name, unsigned flags, hid_t fcpl_id,
 
     if(under) {
         file = malloc(sizeof(H5VL_provenance_t));
-        file->my_type= H5E_FILE;
+        file->my_type= H5I_FILE;
         file->name = name;
     } 
     else
@@ -3744,7 +3748,7 @@ H5VL_provenance_file_create(const char *name, unsigned flags, hid_t fcpl_id,
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
 
     return (void *)file;
-    
+
 } /* end H5VL_provenance_file_create() */
 
 
