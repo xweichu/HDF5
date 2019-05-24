@@ -1947,7 +1947,6 @@ H5VL_provenance_term(void)
 #ifdef ENABLE_PROVNC_LOGGING
     printf("------- PASS THROUGH VOL TERM\n");
 #endif
-    return 0;
     // Release resources, etc.
     prov_helper_teardown(PROV_HELPER);
     PROV_HELPER = NULL;
