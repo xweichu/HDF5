@@ -3393,7 +3393,8 @@ H5VL_provenance_dataset_close(void *dset, hid_t dxpl_id, void **req)
 #ifdef ENABLE_PROVNC_LOGGING
     printf("------- PASS THROUGH VOL DATASET Close\n");
 #endif
-
+    return 0;
+    
     m1 = get_time_usec();
     ret_value = H5VLdataset_close(o->under_object, o->under_vol_id, dxpl_id, req);
     m2 = get_time_usec();
