@@ -66,7 +66,8 @@
 /************/
 
 typedef struct H5VL_provenance_t {
-    char* name;
+    char* file_name;
+    char* dataset_name;
     hid_t  under_vol_id;        /* ID for underlying VOL connector */
     void  *under_object;        /* Info object for underlying VOL connector */
     H5I_type_t my_type;         //obj type, dataset, datatype, etc.,
@@ -2946,7 +2947,7 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
     lst->data.data_val = (char *)malloc(size);
     H5Sencode2(space_id, lst->data.data_val, &size, H5P_DEFAULT);
     lst->data.data_len = (u_int)size;
-    char* new_name = strdup(o->name);
+    char* new_name = strdup(o->file_name);
     lst->name = new_name;
     char* new_dsname = strdup(ds_name);
     lst->dsname = new_dsname;
@@ -2958,11 +2959,13 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
 
     if(under){
         dset = (H5VL_provenance_t*)malloc(sizeof(H5VL_provenance_t));
-        dset->name = new_name;
+        dset->dataset_name = new_dsname;
         dset->my_type = H5I_DATASET;
+        dset->file_name =new_name;
     }
     else
         dset = NULL;
+
     H5Sclose(space_id);
     free(lst->data.data_val);
     free(lst);
@@ -2985,9 +2988,6 @@ static void *
 H5VL_provenance_dataset_open(void *obj, const H5VL_loc_params_t *loc_params,
     const char *ds_name, hid_t dapl_id, hid_t dxpl_id, void **req)
 {
-    unsigned long start = get_time_usec();
-    unsigned long m1, m2;
-
     void *under;
     H5VL_provenance_t *dset;
     H5VL_provenance_t *o = (H5VL_provenance_t *)obj;
@@ -2996,19 +2996,28 @@ H5VL_provenance_dataset_open(void *obj, const H5VL_loc_params_t *loc_params,
     printf("------- PASS THROUGH VOL DATASET Open\n");
 #endif
 
-    m1 = get_time_usec();
-    under = H5VLdataset_open(o->under_object, loc_params, o->under_vol_id, ds_name, dapl_id, dxpl_id, req);
-    m2 = get_time_usec();
+    list *lst;
+    lst = (list*)malloc(sizeof(list));
+    CLIENT *cl;
+    cl = clnt_create("localhost", HDF5SERVER, HDF5SERVER_V1, "tcp");
+    char* new_name = strdup(o->file_name);
+    lst->name = new_name;
+    char* new_dsname = strdup(ds_name);
+    lst->dsname = new_dsname;
+    under = read_dataset_1(lst, cl);
 
-    if(under)
-        dset = _obj_wrap_under(under, o, ds_name, H5I_DATASET, dxpl_id, req);
+    if((int*)under == 0){
+        dset = (H5VL_provenance_t*)malloc(sizeof(H5VL_provenance_t));
+        dset->file_name = new_name;
+        dset->dataset_name = new_dsname;
+        dset->my_type = H5I_DATASET;
+    }
     else
         dset = NULL;
 
-    if(dset)
-        prov_write(dset->prov_helper, __func__, get_time_usec() - start);
-
-    TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
+    free(lst->data.data_val);
+    free(lst);
+    
     return (void *)dset;
 } /* end H5VL_provenance_dataset_open() */
 
@@ -3765,7 +3774,7 @@ H5VL_provenance_file_create(const char *name, unsigned flags, hid_t fcpl_id,
 
     if(under) {
         file = (H5VL_provenance_t *)calloc(1, sizeof(H5VL_provenance_t));
-        file->name = new_name;
+        file->file_name = new_name;
         file->my_type = H5I_FILE;
     }
 
