@@ -23,7 +23,7 @@ int main() {
 //                      dset_data);
 
    // status = H5Dread(dataset_id, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, 
-                    dset_data);
+                  //   dset_data);
 
    /* Close the dataset. */
    status = H5Dclose(dataset_id);
