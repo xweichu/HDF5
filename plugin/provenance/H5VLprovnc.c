@@ -3806,7 +3806,7 @@ H5VL_provenance_file_open(const char *name, unsigned flags, hid_t fapl_id,
     char* new_name = strdup(name);
     under = open_file_1(&new_name, cl);
 
-    if((int*)under==0) {
+    if(under) {
         file = (H5VL_provenance_t *)calloc(1, sizeof(H5VL_provenance_t));
         file->file_name = new_name;
         file->my_type = H5I_FILE;
