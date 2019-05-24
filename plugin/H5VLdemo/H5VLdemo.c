@@ -1,433 +1,185 @@
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
- * All rights reserved.                                                      *
- *                                                                           *
- * This file is part of HDF5.  The full HDF5 copyright notice, including     *
- * terms governing use, modification, and redistribution, is contained in    *
- * the COPYING file, which can be found at the root of the source code       *
- * distribution tree, or in https://support.hdfgroup.org/ftp/HDF5/releases.  *
- * If you do not have access to either file, you may request a copy from     *
- * help@hdfgroup.org.                                                        *
- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+#include "H5VLdemo.h"
 
-/*
- * Purpose:     This is a "pass through" VOL connector, which forwards each
- *              VOL callback to an underlying connector.
- *
- *              It is designed as an example VOL connector for developers to
- *              use when creating new connectors, especially connectors that
- *              are outside of the HDF5 library.  As such, it should _NOT_
- *              include _any_ private HDF5 header files.  This connector should
- *              therefore only make public HDF5 API calls and use standard C /
- *              POSIX calls.
- */
-
-
-/* Header files needed */
-/* (Public HDF5 and standard C / POSIX only) */
-
-#include <assert.h>
-#include <pthread.h>
-#include <stdarg.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/syscall.h>
-#include <sys/time.h>
-#include <sys/types.h>
-#include <time.h>
-#include <unistd.h>
-
-#include "hdf5.h"
-#include "H5VLprovnc.h"
-#include "hdf5creat.h"
 /**********/
 /* Macros */
 /**********/
 
-/* Whether to display log messge when callback is invoked */
-/* (Uncomment to enable) */
-#define ENABLE_PROVNC_LOGGING
 
-/* Hack for missing va_copy() in old Visual Studio editions
- * (from H5win2_defs.h - used on VS2012 and earlier)
- */
-#if defined(_WIN32) && defined(_MSC_VER) && (_MSC_VER < 1800)
-#define va_copy(D,S)      ((D) = (S))
-#endif
+#define STAT_FUNC_MOD 733 //a reasonably big size to avoid expensive collision handling, make sure it works with 62 function names;
 
-#define STAT_FUNC_MOD 733//a reasonably big size to avoid expensive collision handling, make sure it works with 62 function names.
-
-//H5PL_type_t H5PLget_plugin_type(void) {return H5PL_TYPE_FILTER;}
-//const void *H5PLget_plugin_info(void) {return &H5VL_provenance_cls;}
-
-/************/
-/* Typedefs */
-/************/
-
-typedef struct H5VL_provenance_t {
-    char* name;
-    hid_t  under_vol_id;        /* ID for underlying VOL connector */
-    void  *under_object;        /* Info object for underlying VOL connector */
-    H5I_type_t my_type;         //obj type, dataset, datatype, etc.,
-    prov_helper_t *prov_helper; //pointer shared among all layers, one per process.
-    void *generic_prov_info;    // Pointer to a class-specific prov info struct.
-                                // Should be cast to layer-specific type before use,
-                                // such as file_prov_info, dataset_prov_info
-} H5VL_provenance_t;
-
-/* The pass through VOL wrapper context */
-typedef struct H5VL_provenance_wrap_ctx_t {
-    prov_helper_t *prov_helper; //shared pointer
-    hid_t under_vol_id;         /* VOL ID for under VOL */
-    void *under_wrap_ctx;       /* Object wrapping context for under VOL */
-    file_prov_info_t *file_info;
-    unsigned long file_no;
-    hid_t dtype_id;             //only used by datatype.
-} H5VL_provenance_wrap_ctx_t;
-
-//======================================= statistics =======================================
-//typedef struct H5VL_prov_t {
-//    void   *under_object;
-//    char* func_name;
-//    int func_cnt;//stats
-//} H5VL_prov_t;
-
-typedef struct H5VL_prov_dataset_info_t dataset_prov_info_t;
-typedef struct H5VL_prov_group_info_t group_prov_info_t;
-typedef struct H5VL_prov_datatype_info_t datatype_prov_info_t;
-typedef struct H5VL_prov_attribute_info_t attribute_prov_info_t;
-
-struct H5VL_prov_file_info_t {//assigned when a file is closed, serves to store stats (copied from shared_file_info)
-    prov_helper_t* prov_helper; //pointer shared among all layers, one per process.
-    char* file_name;
-    unsigned long file_no;
-#ifdef H5_HAVE_PARALLEL
-    // Only present for parallel HDF5 builds
-    MPI_Comm mpi_comm;          // Copy of MPI communicator for file
-    MPI_Info mpi_info;          // Copy of MPI info for file
-    hbool_t mpi_comm_info_valid; // Indicate that MPI Comm & Info are valid
-#endif /* H5_HAVE_PARALLEL */
-    int ref_cnt;
-
-    /* Currently open objects */
-    int opened_datasets_cnt;
-    dataset_prov_info_t *opened_datasets;
-    int opened_grps_cnt;
-    group_prov_info_t *opened_grps;
-    int opened_dtypes_cnt;
-    datatype_prov_info_t *opened_dtypes;
-    int opened_attrs_cnt;
-    attribute_prov_info_t *opened_attrs;
-
-    /* Statistics */
-    int ds_created;
-    int ds_accessed;
-    int grp_created;
-    int grp_accessed;
-    int dtypes_created;
-    int dtypes_accessed;
-
-    file_prov_info_t *next;
-};
-
-// Common provenance information, for all objects
-typedef struct H5VL_prov_object_info_t {
-    prov_helper_t *prov_helper; //pointer shared among all layers, one per process.
-    file_prov_info_t *file_info;        // Pointer to file info for object's file
-    haddr_t objno;                      // Unique ID within file for object
-    char *name;                         // Name of object within file
-                                        // (possibly NULL and / or non-unique)
-    int ref_cnt;                        // # of references to this prov info
-} object_prov_info_t;
-
-struct H5VL_prov_dataset_info_t {
-    object_prov_info_t obj_info;        // Generic prov. info
-                                        // Must be first field in struct, for
-                                        // generic upcasts to work
-
-    H5T_class_t dt_class;//data type class
-    H5S_class_t ds_class;//data space class
-    H5D_layout_t layout;
-    unsigned int dimension_cnt;
-    hsize_t dimensions[H5S_MAX_RANK];
-    size_t dset_type_size;
-    hsize_t dset_space_size;//unsigned long long
-
-    hsize_t total_bytes_read;
-    hsize_t total_bytes_written;
-    hsize_t total_read_time;
-    hsize_t total_write_time;
-    int dataset_read_cnt;
-    int dataset_write_cnt;
-#ifdef H5_HAVE_PARALLEL
-    int ind_dataset_read_cnt;
-    int ind_dataset_write_cnt;
-    int coll_dataset_read_cnt;
-    int coll_dataset_write_cnt;
-    int broken_coll_dataset_read_cnt;
-    int broken_coll_dataset_write_cnt;
-#endif /* H5_HAVE_PARALLEL */
-    int access_cnt;
-
-    dataset_prov_info_t *next;
-};
-
-struct H5VL_prov_group_info_t {
-    object_prov_info_t obj_info;        // Generic prov. info
-                                        // Must be first field in struct, for
-                                        // generic upcasts to work
-
-    int func_cnt;//stats
-//    int group_get_cnt;
-//    int group_specific_cnt;
-
-    group_prov_info_t *next;
-};
-
-typedef struct H5VL_prov_link_info_t {
-    int link_get_cnt;
-    int link_specific_cnt;
-} link_prov_info_t;
-
-struct H5VL_prov_datatype_info_t {
-    object_prov_info_t obj_info;        // Generic prov. info
-                                        // Must be first field in struct, for
-                                        // generic upcasts to work
-
-    hid_t dtype_id;
-    int datatype_commit_cnt;
-    int datatype_get_cnt;
-
-    datatype_prov_info_t *next;
-};
-
-struct H5VL_prov_attribute_info_t {
-    object_prov_info_t obj_info;        // Generic prov. info
-                                        // Must be first field in struct, for
-                                        // generic upcasts to work
-
-    int func_cnt;//stats
-
-    attribute_prov_info_t *next;
-};
-unsigned long TOTAL_PROV_OVERHEAD;
-unsigned long TOTAL_NATIVE_H5_TIME;
-unsigned long PROV_WRITE_TOTAL_TIME;
-unsigned long FILE_LL_TOTAL_TIME; //record file linked list overhead
-unsigned long DS_LL_TOTAL_TIME; //dataset
-unsigned long GRP_LL_TOTAL_TIME; //group
-unsigned long DT_LL_TOTAL_TIME; //datatype
-unsigned long ATTR_LL_TOTAL_TIME; //attribute
-static prov_helper_t* PROV_HELPER = NULL;
-
-
-//======================================= statistics =======================================
-
-/********************* */
-/* Function prototypes */
-/********************* */
-
-/* Helper routines  */
-static herr_t H5VL_provenance_file_specific_reissue(void *obj, hid_t connector_id,
-    H5VL_file_specific_t specific_type, hid_t dxpl_id, void **req, ...);  //TOTAL_PROV_OVERHEAD is not recorded.
-static herr_t H5VL_provenance_request_specific_reissue(void *obj, hid_t connector_id,
-    H5VL_request_specific_t specific_type, ...); //TOTAL_PROV_OVERHEAD is not recorded.
-static herr_t H5VL_provenance_link_create_reissue(H5VL_link_create_type_t create_type,
-    void *obj, const H5VL_loc_params_t *loc_params, hid_t connector_id,
-    hid_t lcpl_id, hid_t lapl_id, hid_t dxpl_id, void **req, ...);
-static H5VL_provenance_t *H5VL_provenance_new_obj(void *under_obj,
-    hid_t under_vol_id, prov_helper_t* helper);
-static herr_t H5VL_provenance_free_obj(H5VL_provenance_t *obj);
-
-/* "Management" callbacks */
-static herr_t H5VL_provenance_init(hid_t vipl_id);
-static herr_t H5VL_provenance_term(void);
-static void *H5VL_provenance_info_copy(const void *info);
-static herr_t H5VL_provenance_info_cmp(int *cmp_value, const void *info1, const void *info2);
-static herr_t H5VL_provenance_info_free(void *info);
-static herr_t H5VL_provenance_info_to_str(const void *info, char **str);
-static herr_t H5VL_provenance_str_to_info(const char *str, void **info);
-static void *H5VL_provenance_get_object(const void *obj);
-static herr_t H5VL_provenance_get_wrap_ctx(const void *obj, void **wrap_ctx);
-static void *H5VL_provenance_wrap_object(void *under_under_in, H5I_type_t obj_type, void *wrap_ctx);
-static void *H5VL_provenance_unwrap_object(void *under);
-static herr_t H5VL_provenance_free_wrap_ctx(void *obj);
 
 /* Attribute callbacks */
-static void *H5VL_provenance_attr_create(void *obj, const H5VL_loc_params_t *loc_params,
+static void *H5VL_demo_attr_create(void *obj, const H5VL_loc_params_t *loc_params,
     const char *name, hid_t type_id, hid_t space_id, hid_t acpl_id,
     hid_t aapl_id, hid_t dxpl_id, void **req);
-static void *H5VL_provenance_attr_open(void *obj, const H5VL_loc_params_t *loc_params, const char *name, hid_t aapl_id, hid_t dxpl_id, void **req);
-static herr_t H5VL_provenance_attr_read(void *attr, hid_t mem_type_id, void *buf, hid_t dxpl_id, void **req);
-static herr_t H5VL_provenance_attr_write(void *attr, hid_t mem_type_id, const void *buf, hid_t dxpl_id, void **req);
-static herr_t H5VL_provenance_attr_get(void *obj, H5VL_attr_get_t get_type, hid_t dxpl_id, void **req, va_list arguments);
-static herr_t H5VL_provenance_attr_specific(void *obj, const H5VL_loc_params_t *loc_params, H5VL_attr_specific_t specific_type, hid_t dxpl_id, void **req, va_list arguments);
-static herr_t H5VL_provenance_attr_optional(void *obj, hid_t dxpl_id, void **req, va_list arguments);
-static herr_t H5VL_provenance_attr_close(void *attr, hid_t dxpl_id, void **req);
+static void *H5VL_demo_attr_open(void *obj, const H5VL_loc_params_t *loc_params, const char *name, hid_t aapl_id, hid_t dxpl_id, void **req);
+static herr_t H5VL_demo_attr_read(void *attr, hid_t mem_type_id, void *buf, hid_t dxpl_id, void **req);
+static herr_t H5VL_demo_attr_write(void *attr, hid_t mem_type_id, const void *buf, hid_t dxpl_id, void **req);
+static herr_t H5VL_demo_attr_get(void *obj, H5VL_attr_get_t get_type, hid_t dxpl_id, void **req, va_list arguments);
+static herr_t H5VL_demo_attr_specific(void *obj, const H5VL_loc_params_t *loc_params, H5VL_attr_specific_t specific_type, hid_t dxpl_id, void **req, va_list arguments);
+static herr_t H5VL_demo_attr_optional(void *obj, hid_t dxpl_id, void **req, va_list arguments);
+static herr_t H5VL_demo_attr_close(void *attr, hid_t dxpl_id, void **req);
 
 /* Dataset callbacks */
-static void *H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
+static void *H5VL_demo_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
     const char *ds_name, hid_t lcpl_id, hid_t type_id, hid_t space_id,
     hid_t dcpl_id, hid_t dapl_id, hid_t dxpl_id, void **req);
-static void *H5VL_provenance_dataset_open(void *obj, const H5VL_loc_params_t *loc_params, const char *ds_name, hid_t dapl_id, hid_t dxpl_id, void **req);
-static herr_t H5VL_provenance_dataset_read(void *dset, hid_t mem_type_id, hid_t mem_space_id,
+static void *H5VL_demo_dataset_open(void *obj, const H5VL_loc_params_t *loc_params, const char *ds_name, hid_t dapl_id, hid_t dxpl_id, void **req);
+static herr_t H5VL_demo_dataset_read(void *dset, hid_t mem_type_id, hid_t mem_space_id,
                                     hid_t file_space_id, hid_t plist_id, void *buf, void **req);
-static herr_t H5VL_provenance_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id, hid_t file_space_id, hid_t plist_id, const void *buf, void **req);
-static herr_t H5VL_provenance_dataset_get(void *dset, H5VL_dataset_get_t get_type, hid_t dxpl_id, void **req, va_list arguments);
-static herr_t H5VL_provenance_dataset_specific(void *obj, H5VL_dataset_specific_t specific_type, hid_t dxpl_id, void **req, va_list arguments);
-static herr_t H5VL_provenance_dataset_optional(void *obj, hid_t dxpl_id, void **req, va_list arguments);
-static herr_t H5VL_provenance_dataset_close(void *dset, hid_t dxpl_id, void **req);
+static herr_t H5VL_demo_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id, hid_t file_space_id, hid_t plist_id, const void *buf, void **req);
+static herr_t H5VL_demo_dataset_get(void *dset, H5VL_dataset_get_t get_type, hid_t dxpl_id, void **req, va_list arguments);
+static herr_t H5VL_demo_dataset_specific(void *obj, H5VL_dataset_specific_t specific_type, hid_t dxpl_id, void **req, va_list arguments);
+static herr_t H5VL_demo_dataset_optional(void *obj, hid_t dxpl_id, void **req, va_list arguments);
+static herr_t H5VL_demo_dataset_close(void *dset, hid_t dxpl_id, void **req);
 
 /* Datatype callbacks */
-static void *H5VL_provenance_datatype_commit(void *obj, const H5VL_loc_params_t *loc_params, const char *name, hid_t type_id, hid_t lcpl_id, hid_t tcpl_id, hid_t tapl_id, hid_t dxpl_id, void **req);
-static void *H5VL_provenance_datatype_open(void *obj, const H5VL_loc_params_t *loc_params, const char *name, hid_t tapl_id, hid_t dxpl_id, void **req);
-static herr_t H5VL_provenance_datatype_get(void *dt, H5VL_datatype_get_t get_type, hid_t dxpl_id, void **req, va_list arguments);
-static herr_t H5VL_provenance_datatype_specific(void *obj, H5VL_datatype_specific_t specific_type, hid_t dxpl_id, void **req, va_list arguments);
-static herr_t H5VL_provenance_datatype_optional(void *obj, hid_t dxpl_id, void **req, va_list arguments);
-static herr_t H5VL_provenance_datatype_close(void *dt, hid_t dxpl_id, void **req);
+static void *H5VL_demo_datatype_commit(void *obj, const H5VL_loc_params_t *loc_params, const char *name, hid_t type_id, hid_t lcpl_id, hid_t tcpl_id, hid_t tapl_id, hid_t dxpl_id, void **req);
+static void *H5VL_demo_datatype_open(void *obj, const H5VL_loc_params_t *loc_params, const char *name, hid_t tapl_id, hid_t dxpl_id, void **req);
+static herr_t H5VL_demo_datatype_get(void *dt, H5VL_datatype_get_t get_type, hid_t dxpl_id, void **req, va_list arguments);
+static herr_t H5VL_demo_datatype_specific(void *obj, H5VL_datatype_specific_t specific_type, hid_t dxpl_id, void **req, va_list arguments);
+static herr_t H5VL_demo_datatype_optional(void *obj, hid_t dxpl_id, void **req, va_list arguments);
+static herr_t H5VL_demo_datatype_close(void *dt, hid_t dxpl_id, void **req);
 
 /* File callbacks */
-static void *H5VL_provenance_file_create(const char *name, unsigned flags, hid_t fcpl_id, hid_t fapl_id, hid_t dxpl_id, void **req);
-static void *H5VL_provenance_file_open(const char *name, unsigned flags, hid_t fapl_id, hid_t dxpl_id, void **req);
-static herr_t H5VL_provenance_file_get(void *file, H5VL_file_get_t get_type, hid_t dxpl_id, void **req, va_list arguments);
-static herr_t H5VL_provenance_file_specific(void *file, H5VL_file_specific_t specific_type, hid_t dxpl_id, void **req, va_list arguments);
-static herr_t H5VL_provenance_file_optional(void *file, hid_t dxpl_id, void **req, va_list arguments);
-static herr_t H5VL_provenance_file_close(void *file, hid_t dxpl_id, void **req);
+static void *H5VL_demo_file_create(const char *name, unsigned flags, hid_t fcpl_id, hid_t fapl_id, hid_t dxpl_id, void **req);
+static void *H5VL_demo_file_open(const char *name, unsigned flags, hid_t fapl_id, hid_t dxpl_id, void **req);
+static herr_t H5VL_demo_file_get(void *file, H5VL_file_get_t get_type, hid_t dxpl_id, void **req, va_list arguments);
+static herr_t H5VL_demo_file_specific(void *file, H5VL_file_specific_t specific_type, hid_t dxpl_id, void **req, va_list arguments);
+static herr_t H5VL_demo_file_optional(void *file, hid_t dxpl_id, void **req, va_list arguments);
+static herr_t H5VL_demo_file_close(void *file, hid_t dxpl_id, void **req);
 
 /* Group callbacks */
-static void *H5VL_provenance_group_create(void *obj, const H5VL_loc_params_t *loc_params,
+static void *H5VL_demo_group_create(void *obj, const H5VL_loc_params_t *loc_params,
     const char *name, hid_t lcpl_id, hid_t gcpl_id, hid_t gapl_id, hid_t dxpl_id, void **req);
-static void *H5VL_provenance_group_open(void *obj, const H5VL_loc_params_t *loc_params, const char *name, hid_t gapl_id, hid_t dxpl_id, void **req);
-static herr_t H5VL_provenance_group_get(void *obj, H5VL_group_get_t get_type, hid_t dxpl_id, void **req, va_list arguments);
-static herr_t H5VL_provenance_group_specific(void *obj, H5VL_group_specific_t specific_type, hid_t dxpl_id, void **req, va_list arguments);
-static herr_t H5VL_provenance_group_optional(void *obj, hid_t dxpl_id, void **req, va_list arguments);
-static herr_t H5VL_provenance_group_close(void *grp, hid_t dxpl_id, void **req);
+static void *H5VL_demo_group_open(void *obj, const H5VL_loc_params_t *loc_params, const char *name, hid_t gapl_id, hid_t dxpl_id, void **req);
+static herr_t H5VL_demo_group_get(void *obj, H5VL_group_get_t get_type, hid_t dxpl_id, void **req, va_list arguments);
+static herr_t H5VL_demo_group_specific(void *obj, H5VL_group_specific_t specific_type, hid_t dxpl_id, void **req, va_list arguments);
+static herr_t H5VL_demo_group_optional(void *obj, hid_t dxpl_id, void **req, va_list arguments);
+static herr_t H5VL_demo_group_close(void *grp, hid_t dxpl_id, void **req);
 
 /* Link callbacks */
-static herr_t H5VL_provenance_link_create(H5VL_link_create_type_t create_type,
+static herr_t H5VL_demo_link_create(H5VL_link_create_type_t create_type,
     void *obj, const H5VL_loc_params_t *loc_params, hid_t lcpl_id, hid_t lapl_id,
     hid_t dxpl_id, void **req, va_list arguments);
-static herr_t H5VL_provenance_link_copy(void *src_obj, const H5VL_loc_params_t *loc_params1, void *dst_obj, const H5VL_loc_params_t *loc_params2, hid_t lcpl_id, hid_t lapl_id, hid_t dxpl_id, void **req);
-static herr_t H5VL_provenance_link_move(void *src_obj, const H5VL_loc_params_t *loc_params1, void *dst_obj, const H5VL_loc_params_t *loc_params2, hid_t lcpl_id, hid_t lapl_id, hid_t dxpl_id, void **req);
-static herr_t H5VL_provenance_link_get(void *obj, const H5VL_loc_params_t *loc_params, H5VL_link_get_t get_type, hid_t dxpl_id, void **req, va_list arguments);
-static herr_t H5VL_provenance_link_specific(void *obj, const H5VL_loc_params_t *loc_params, H5VL_link_specific_t specific_type, hid_t dxpl_id, void **req, va_list arguments);
-static herr_t H5VL_provenance_link_optional(void *obj, hid_t dxpl_id, void **req, va_list arguments);
+static herr_t H5VL_demo_link_copy(void *src_obj, const H5VL_loc_params_t *loc_params1, void *dst_obj, const H5VL_loc_params_t *loc_params2, hid_t lcpl_id, hid_t lapl_id, hid_t dxpl_id, void **req);
+static herr_t H5VL_demo_link_move(void *src_obj, const H5VL_loc_params_t *loc_params1, void *dst_obj, const H5VL_loc_params_t *loc_params2, hid_t lcpl_id, hid_t lapl_id, hid_t dxpl_id, void **req);
+static herr_t H5VL_demo_link_get(void *obj, const H5VL_loc_params_t *loc_params, H5VL_link_get_t get_type, hid_t dxpl_id, void **req, va_list arguments);
+static herr_t H5VL_demo_link_specific(void *obj, const H5VL_loc_params_t *loc_params, H5VL_link_specific_t specific_type, hid_t dxpl_id, void **req, va_list arguments);
+static herr_t H5VL_demo_link_optional(void *obj, hid_t dxpl_id, void **req, va_list arguments);
 
 /* Object callbacks */
-static void *H5VL_provenance_object_open(void *obj, const H5VL_loc_params_t *loc_params, H5I_type_t *obj_to_open_type, hid_t dxpl_id, void **req);
-static herr_t H5VL_provenance_object_copy(void *src_obj, const H5VL_loc_params_t *src_loc_params, const char *src_name, void *dst_obj, const H5VL_loc_params_t *dst_loc_params, const char *dst_name, hid_t ocpypl_id, hid_t lcpl_id, hid_t dxpl_id, void **req);
-static herr_t H5VL_provenance_object_get(void *obj, const H5VL_loc_params_t *loc_params, H5VL_object_get_t get_type, hid_t dxpl_id, void **req, va_list arguments);
-static herr_t H5VL_provenance_object_specific(void *obj, const H5VL_loc_params_t *loc_params, H5VL_object_specific_t specific_type, hid_t dxpl_id, void **req, va_list arguments);
-static herr_t H5VL_provenance_object_optional(void *obj, hid_t dxpl_id, void **req, va_list arguments);
+static void *H5VL_demo_object_open(void *obj, const H5VL_loc_params_t *loc_params, H5I_type_t *obj_to_open_type, hid_t dxpl_id, void **req);
+static herr_t H5VL_demo_object_copy(void *src_obj, const H5VL_loc_params_t *src_loc_params, const char *src_name, void *dst_obj, const H5VL_loc_params_t *dst_loc_params, const char *dst_name, hid_t ocpypl_id, hid_t lcpl_id, hid_t dxpl_id, void **req);
+static herr_t H5VL_demo_object_get(void *obj, const H5VL_loc_params_t *loc_params, H5VL_object_get_t get_type, hid_t dxpl_id, void **req, va_list arguments);
+static herr_t H5VL_demo_object_specific(void *obj, const H5VL_loc_params_t *loc_params, H5VL_object_specific_t specific_type, hid_t dxpl_id, void **req, va_list arguments);
+static herr_t H5VL_demo_object_optional(void *obj, hid_t dxpl_id, void **req, va_list arguments);
 
 /* Async request callbacks */
-static herr_t H5VL_provenance_request_wait(void *req, uint64_t timeout, H5ES_status_t *status);
-static herr_t H5VL_provenance_request_notify(void *obj, H5VL_request_notify_t cb, void *ctx);
-static herr_t H5VL_provenance_request_cancel(void *req);
-static herr_t H5VL_provenance_request_specific(void *req, H5VL_request_specific_t specific_type, va_list arguments);
-static herr_t H5VL_provenance_request_optional(void *req, va_list arguments);
-static herr_t H5VL_provenance_request_free(void *req);
+static herr_t H5VL_demo_request_wait(void *req, uint64_t timeout, H5ES_status_t *status);
+static herr_t H5VL_demo_request_notify(void *obj, H5VL_request_notify_t cb, void *ctx);
+static herr_t H5VL_demo_request_cancel(void *req);
+static herr_t H5VL_demo_request_specific(void *req, H5VL_request_specific_t specific_type, va_list arguments);
+static herr_t H5VL_demo_request_optional(void *req, va_list arguments);
+static herr_t H5VL_demo_request_free(void *req);
 
 /*******************/
 /* Local variables */
 /*******************/
 
-/* Pass through VOL connector class struct */
-static const H5VL_class_t H5VL_provenance_cls = {
-    H5VL_PROVNC_VERSION,                          /* version      */
-    (H5VL_class_value_t)H5VL_PROVNC_VALUE,        /* value        */
-    H5VL_PROVNC_NAME,                             /* name         */
-    0,                                            /* capability flags */
-    H5VL_provenance_init,                         /* initialize   */
-    H5VL_provenance_term,                         /* terminate    */
-    {                                           /* info_cls */
-        sizeof(H5VL_provenance_info_t),           /* info size    */
-        H5VL_provenance_info_copy,                /* info copy    */
-        H5VL_provenance_info_cmp,                 /* info compare */
-        H5VL_provenance_info_free,                /* info free    */
-        H5VL_provenance_info_to_str,              /* info to str  */
-        H5VL_provenance_str_to_info,              /* str to info  */
+/* The RADOS VOL plugin struct */
+static const H5VL_class_t H5VL_demo_g = {
+    H5VL_DEMO_VERSION,                       /* version      */
+    H5VL_DEMO_VALUE,                               /* value        */
+    H5VL_DEMO_NAME,                         /* name         */
+    0,                                              /* capability flags */
+    H5VL_demo_init,                                /* initialize */
+    H5VL_demo_term,                                /* terminate */
+    {   /* info_cls - may need more here (DER) */
+        NULL,                                       /* info size    */
+        NULL,                                       /* info copy    */
+        NULL,                                       /* info compare */
+        NULL,                                       /* info free    */
+        NULL,                                       /* info to str  */
+        NULL                                        /* str to info  */
     },
-    {                                           /* wrap_cls */
-        NULL,               /* get_object   */
-        NULL,             /* get_wrap_ctx */
-        NULL,              /* wrap_object  */
-        NULL,            /* unwrap_object  */
-        NULL,            /* free_wrap_ctx */
+    {   /* wrap_cls */
+        NULL,                                       /* get_object    */
+        NULL,                                       /* get_wrap_ctx  */
+        NULL,                                       /* wrap_object   */
+        NULL,                                       /* unwrap_object */
+        NULL                                        /* free_wrap_ctx */
     },
-    {                                           /* attribute_cls */
-        H5VL_provenance_attr_create,                       /* create */
-        H5VL_provenance_attr_open,                         /* open */
-        H5VL_provenance_attr_read,                         /* read */
-        H5VL_provenance_attr_write,                        /* write */
-        H5VL_provenance_attr_get,                          /* get */
-        H5VL_provenance_attr_specific,                     /* specific */
-        H5VL_provenance_attr_optional,                     /* optional */
-        H5VL_provenance_attr_close                         /* close */
+    {   /* attribute_cls */
+        NULL,                                       /* create */
+        NULL,                                       /* open */
+        NULL,                                       /* read */
+        NULL,                                       /* write */
+        NULL,                                       /* get */
+        NULL,                                       /* specific */
+        NULL,                                       /* optional */
+        NULL,                                       /* close */
     },
-    {                                           /* dataset_cls */
-        H5VL_provenance_dataset_create,                    /* create */
-        H5VL_provenance_dataset_open,                      /* open */
-        H5VL_provenance_dataset_read,                      /* read */
-        H5VL_provenance_dataset_write,                     /* write */
-        H5VL_provenance_dataset_get,                       /* get */
-        H5VL_provenance_dataset_specific,                  /* specific */
-        H5VL_provenance_dataset_optional,                  /* optional */
-        H5VL_provenance_dataset_close                      /* close */
+    {   /* dataset_cls */
+        H5VL_demo_dataset_create,                  /* create */
+        H5VL_demo_dataset_open,                    /* open */
+        H5VL_demo_dataset_read,                    /* read */
+        H5VL_demo_dataset_write,                   /* write */
+        H5VL_demo_dataset_get,                     /* get */
+        NULL,                                       /* specific */
+        NULL,                                       /* optional */
+        H5VL_demo_dataset_close                    /* close */
     },
-    {                                               /* datatype_cls */
-        H5VL_provenance_datatype_commit,                   /* commit */
-        H5VL_provenance_datatype_open,                     /* open */
-        H5VL_provenance_datatype_get,                      /* get_size */
-        H5VL_provenance_datatype_specific,                 /* specific */
-        H5VL_provenance_datatype_optional,                 /* optional */
-        H5VL_provenance_datatype_close                     /* close */
+    {   /* datatype_cls */
+        NULL,                                       /* commit */
+        NULL,                                       /* open */
+        NULL,                                       /* get */
+        NULL,                                       /* specific */
+        NULL,                                       /* optional */
+        NULL,                                       /* close */
     },
-    {                                           /* file_cls */
-        H5VL_provenance_file_create,                       /* create */
-        H5VL_provenance_file_open,                         /* open */
-        H5VL_provenance_file_get,                          /* get */
-        H5VL_provenance_file_specific,                     /* specific */
-        H5VL_provenance_file_optional,                     /* optional */
-        H5VL_provenance_file_close                         /* close */
+    {   /* file_cls */
+        H5VL_demo_file_create,                     /* create */
+        H5VL_demo_file_open,                       /* open */
+        NULL,                                       /* get */
+        H5VL_demo_file_specific,                   /* specific */
+        NULL,                                       /* optional */
+        H5VL_demo_file_close                       /* close */
     },
-    {                                           /* group_cls */
-        H5VL_provenance_group_create,                      /* create */
-        H5VL_provenance_group_open,                        /* open */
-        H5VL_provenance_group_get,                         /* get */
-        H5VL_provenance_group_specific,                    /* specific */
-        H5VL_provenance_group_optional,                    /* optional */
-        H5VL_provenance_group_close                        /* close */
+    {   /* group_cls */
+        H5VL_demo_group_create,                    /* create */
+        H5VL_demo_group_open,                      /* open */
+        NULL,                                       /* get */
+        NULL,                                       /* specific */
+        NULL,                                       /* optional */
+        H5VL_demo_group_close                      /* close */
     },
-    {                                           /* link_cls */
-        H5VL_provenance_link_create,                       /* create */
-        H5VL_provenance_link_copy,                         /* copy */
-        H5VL_provenance_link_move,                         /* move */
-        H5VL_provenance_link_get,                          /* get */
-        H5VL_provenance_link_specific,                     /* specific */
-        H5VL_provenance_link_optional,                     /* optional */
+    {   /* link_cls */
+        NULL,                                       /* create */
+        NULL,                                       /* copy */
+        NULL,                                       /* move */
+        NULL,                                       /* get */
+        NULL,                                       /* specific */
+        NULL                                        /* optional */
     },
-    {                                           /* object_cls */
-        H5VL_provenance_object_open,                       /* open */
-        H5VL_provenance_object_copy,                       /* copy */
-        H5VL_provenance_object_get,                        /* get */
-        H5VL_provenance_object_specific,                   /* specific */
-        H5VL_provenance_object_optional,                   /* optional */
+    {   /* object_cls */
+        NULL,                                       /* open */
+        NULL,                                       /* copy */
+        NULL,                                       /* get */
+        NULL,                                       /* specific */
+        NULL,                                       /* optional */
     },
-    {                                           /* request_cls */
-        H5VL_provenance_request_wait,                      /* wait */
-        H5VL_provenance_request_notify,                    /* notify */
-        H5VL_provenance_request_cancel,                    /* cancel */
-        H5VL_provenance_request_specific,                  /* specific */
-        H5VL_provenance_request_optional,                  /* optional */
-        H5VL_provenance_request_free                       /* free */
+    {   /* request_cls */
+        NULL,                                       /* wait         */
+        NULL,                                       /* notify       */
+        NULL,                                       /* cancel       */
+        NULL,                                       /* specific     */
+        NULL,                                       /* optional     */
+        NULL                                        /* free         */
     },
-    NULL                                        /* optional */
+    NULL                                            /* optional     */
 };
 
-H5PL_type_t H5PLget_plugin_type(void) {return H5PL_TYPE_VOL;}
-const void *H5PLget_plugin_info(void) {return &H5VL_provenance_cls;}
 
 /* The connector identification number, initialized at runtime */
 static hid_t prov_connector_id_global = H5I_INVALID_HID;
@@ -475,7 +227,7 @@ int rm_attr_node(prov_helper_t *helper, attribute_prov_info_t *attr_info);
 file_prov_info_t* add_file_node(prov_helper_t* helper, const char* file_name, unsigned long file_no);
 int rm_file_node(prov_helper_t* helper, unsigned long file_no);
 file_prov_info_t* _search_home_file(unsigned long obj_file_no);
-dataset_prov_info_t* add_dataset_node(unsigned long obj_file_no, H5VL_provenance_t* dset, haddr_t native_addr,
+dataset_prov_info_t* add_dataset_node(unsigned long obj_file_no, H5VL_demo_t* dset, haddr_t native_addr,
         file_prov_info_t* file_info_in, const char* ds_name, hid_t dxpl_id, void** req);
 int rm_dataset_node(prov_helper_t *helper, dataset_prov_info_t *dset_info);
 void ptr_cnt_increment(prov_helper_t* helper);
@@ -486,13 +238,13 @@ dataset_prov_info_t* new_ds_prov_info(void* under_object, hid_t vol_id, haddr_t 
         file_prov_info_t* file_info, const char* ds_name, hid_t dxpl_id, void **req);
 void _new_loc_pram(H5I_type_t type, H5VL_loc_params_t *lparam);
 herr_t get_native_info(void* obj, hid_t vol_id, hid_t dxpl_id, void **req, ...);
-void get_native_file_no(unsigned long* file_num_out, const H5VL_provenance_t* file_obj);
-herr_t provenance_file_setup(const char* str_in, char* file_path_out, Prov_level* level_out, char* format_out);
-H5VL_provenance_t* _fake_obj_new(file_prov_info_t* root_file, hid_t under_vol_id);
-void _fake_obj_free(H5VL_provenance_t* obj);
-H5VL_provenance_t* _obj_wrap_under(void* under, H5VL_provenance_t* upper_o,
+void get_native_file_no(unsigned long* file_num_out, const H5VL_demo_t* file_obj);
+herr_t demo_file_setup(const char* str_in, char* file_path_out, Prov_level* level_out, char* format_out);
+H5VL_demo_t* _fake_obj_new(file_prov_info_t* root_file, hid_t under_vol_id);
+void _fake_obj_free(H5VL_demo_t* obj);
+H5VL_demo_t* _obj_wrap_under(void* under, H5VL_demo_t* upper_o,
         const char *name, H5I_type_t type, hid_t dxpl_id, void** req);
-H5VL_provenance_t* _file_open_common(void* under, hid_t vol_id, const char* name);
+H5VL_demo_t* _file_open_common(void* under, hid_t vol_id, const char* name);
 unsigned int genHash(const char *msg);
 void _dic_init(void);
 void _dic_print(void);
@@ -724,7 +476,7 @@ prov_helper_t* prov_helper_init( char* file_path, Prov_level prov_level, char* p
 
     if(prov_level >= 2) {//write to file
         if(!file_path){
-            printf("prov_helper_init() failed, provenance file path is not set.\n");
+            printf("prov_helper_init() failed, demo file path is not set.\n");
             return NULL;
         }
     }
@@ -1199,7 +951,7 @@ file_prov_info_t* _search_home_file(unsigned long obj_file_no){
 }
 
 dataset_prov_info_t* add_dataset_node(unsigned long obj_file_no,
-    H5VL_provenance_t* dset, haddr_t native_addr, file_prov_info_t* file_info_in,
+    H5VL_demo_t* dset, haddr_t native_addr, file_prov_info_t* file_info_in,
     const char* ds_name, hid_t dxpl_id, void** req)
 {
     unsigned long start = get_time_usec();
@@ -1303,37 +1055,37 @@ int rm_dataset_node(prov_helper_t *helper, dataset_prov_info_t *dset_info)
     return -1;
 }
 
-//This function makes up a fake upper layer obj used as a parameter in _obj_wrap_under(..., H5VL_provenance_t* upper_o,... ),
-//Use this in H5VL_provenance_wrap_object() ONLY!!!
-H5VL_provenance_t* _fake_obj_new(file_prov_info_t *root_file, hid_t under_vol_id)
+//This function makes up a fake upper layer obj used as a parameter in _obj_wrap_under(..., H5VL_demo_t* upper_o,... ),
+//Use this in H5VL_demo_wrap_object() ONLY!!!
+H5VL_demo_t* _fake_obj_new(file_prov_info_t *root_file, hid_t under_vol_id)
 {
-    H5VL_provenance_t* obj;
+    H5VL_demo_t* obj;
 
-    obj = H5VL_provenance_new_obj(NULL, under_vol_id, PROV_HELPER);
+    obj = H5VL_demo_new_obj(NULL, under_vol_id, PROV_HELPER);
     obj->my_type = H5I_FILE;  // FILE should work fine as a parent obj for all.
     obj->generic_prov_info = (void*)root_file;
 
     return obj;
 }
 
-void _fake_obj_free(H5VL_provenance_t *obj)
+void _fake_obj_free(H5VL_demo_t *obj)
 {
-    H5VL_provenance_free_obj(obj);
+    H5VL_demo_free_obj(obj);
 }
 
 /* under: obj need to be wrapped
  * upper_o: holder or upper layer object. Mostly used to pass root_file_info, vol_id, etc,.
- *      - it's a fake obj if called by H5VL_provenance_wrap_object().
+ *      - it's a fake obj if called by H5VL_demo_wrap_object().
  * target_obj_type:
- *      - for H5VL_provenance_wrap_object(obj_type): the obj should be wrapped into this type
- *      - for H5VL_provenance_object_open(): it's the obj need to be opened as this type
+ *      - for H5VL_demo_wrap_object(obj_type): the obj should be wrapped into this type
+ *      - for H5VL_demo_object_open(): it's the obj need to be opened as this type
  *
  */
-H5VL_provenance_t* _obj_wrap_under(void* under, H5VL_provenance_t* upper_o,
+H5VL_demo_t* _obj_wrap_under(void* under, H5VL_demo_t* upper_o,
         const char *target_obj_name, H5I_type_t target_obj_type, hid_t dxpl_id,
         void** req)
 {
-    H5VL_provenance_t *obj;
+    H5VL_demo_t *obj;
     file_prov_info_t *file_info = NULL;
 
     if (under) {
@@ -1372,11 +1124,11 @@ H5VL_provenance_t* _obj_wrap_under(void* under, H5VL_provenance_t* upper_o,
         }
         assert(file_info);
 
-        obj = H5VL_provenance_new_obj(under, upper_o->under_vol_id, upper_o->prov_helper);
+        obj = H5VL_demo_new_obj(under, upper_o->under_vol_id, upper_o->prov_helper);
 
         /* Check for async request */
         if (req && *req)
-            *req = H5VL_provenance_new_obj(*req, upper_o->under_vol_id, upper_o->prov_helper);
+            *req = H5VL_demo_new_obj(*req, upper_o->under_vol_id, upper_o->prov_helper);
 
         //obj types
         if(target_obj_type != H5I_FILE) {
@@ -1546,18 +1298,18 @@ herr_t get_native_info(void* obj, hid_t vol_id, hid_t dxpl_id, void **req, ...)
     return r;
 }
 
-void get_native_file_no(unsigned long* fileno, const H5VL_provenance_t* file_obj)
+void get_native_file_no(unsigned long* fileno, const H5VL_demo_t* file_obj)
 {
     file_get_wrapper(file_obj->under_object, file_obj->under_vol_id, H5VL_FILE_GET_FILENO, H5P_DEFAULT, NULL, fileno);
 }
 
-H5VL_provenance_t *_file_open_common(void *under, hid_t vol_id,
+H5VL_demo_t *_file_open_common(void *under, hid_t vol_id,
     const char *name)
 {
-    H5VL_provenance_t *file;
+    H5VL_demo_t *file;
     unsigned long file_no = 0;
 
-    file = H5VL_provenance_new_obj(under, vol_id, PROV_HELPER);
+    file = H5VL_demo_new_obj(under, vol_id, PROV_HELPER);
     file->my_type = H5I_FILE;
     get_native_file_no(&file_no, file);
     file->generic_prov_info = add_file_node(PROV_HELPER, name, file_no);
@@ -1657,69 +1409,69 @@ void _dic_print(void){
 }
 void _preset_dic_print(void){
     const char* preset_dic[] = {
-            "H5VL_provenance_init",                         /* initialize   */
-            "H5VL_provenance_term",                         /* terminate    */
-            "H5VL_provenance_info_copy",                /* info copy    */
-            "H5VL_provenance_info_cmp",                 /* info compare */
-            "H5VL_provenance_info_free",                /* info free    */
-            "H5VL_provenance_info_to_str",              /* info to str  */
-            "H5VL_provenance_str_to_info",              /* str to info  */
-            "H5VL_provenance_get_object",               /* get_object   */
-            "H5VL_provenance_get_wrap_ctx",             /* get_wrap_ctx */
-            "H5VL_provenance_wrap_object",              /* wrap_object  */
-            "H5VL_provenance_unwrap_object",            /* unwrap_object  */
-            "H5VL_provenance_free_wrap_ctx",            /* free_wrap_ctx */
-            "H5VL_provenance_attr_create",                       /* create */
-            "H5VL_provenance_attr_open",                         /* open */
-            "H5VL_provenance_attr_read",                         /* read */
-            "H5VL_provenance_attr_write",                        /* write */
-            "H5VL_provenance_attr_get",                          /* get */
-            "H5VL_provenance_attr_specific",                     /* specific */
-            "H5VL_provenance_attr_optional",                     /* optional */
-            "H5VL_provenance_attr_close",                         /* close */
-            "H5VL_provenance_dataset_create",                    /* create */
-            "H5VL_provenance_dataset_open",                      /* open */
-            "H5VL_provenance_dataset_read",                      /* read */
-            "H5VL_provenance_dataset_write",                     /* write */
-            "H5VL_provenance_dataset_get",                       /* get */
-            "H5VL_provenance_dataset_specific",                  /* specific */
-            "H5VL_provenance_dataset_optional",                  /* optional */
-            "H5VL_provenance_dataset_close",                      /* close */
-            "H5VL_provenance_datatype_commit",                   /* commit */
-            "H5VL_provenance_datatype_open",                     /* open */
-            "H5VL_provenance_datatype_get",                      /* get_size */
-            "H5VL_provenance_datatype_specific",                 /* specific */
-            "H5VL_provenance_datatype_optional",                 /* optional */
-            "H5VL_provenance_datatype_close",                     /* close */
-            "H5VL_provenance_file_create",                       /* create */
-            "H5VL_provenance_file_open",                         /* open */
-            "H5VL_provenance_file_get",                          /* get */
-            "H5VL_provenance_file_specific",                     /* specific */
-            "H5VL_provenance_file_optional",                     /* optional */
-            "H5VL_provenance_file_close",                         /* close */
-            "H5VL_provenance_group_create",                      /* create */
-            "H5VL_provenance_group_open",                        /* open */
-            "H5VL_provenance_group_get",                         /* get */
-            "H5VL_provenance_group_specific",                    /* specific */
-            "H5VL_provenance_group_optional",                    /* optional */
-            "H5VL_provenance_group_close",                        /* close */
-            "H5VL_provenance_link_create",                       /* create */
-            "H5VL_provenance_link_copy",                         /* copy */
-            "H5VL_provenance_link_move",                         /* move */
-            "H5VL_provenance_link_get",                          /* get */
-            "H5VL_provenance_link_specific",                     /* specific */
-            "H5VL_provenance_link_optional",                     /* optional */
-            "H5VL_provenance_object_open",                       /* open */
-            "H5VL_provenance_object_copy",                       /* copy */
-            "H5VL_provenance_object_get",                        /* get */
-            "H5VL_provenance_object_specific",                   /* specific */
-            "H5VL_provenance_object_optional",                   /* optional */
-            "H5VL_provenance_request_wait",                      /* wait */
-            "H5VL_provenance_request_notify",
-            "H5VL_provenance_request_cancel",
-            "H5VL_provenance_request_specific",
-            "H5VL_provenance_request_optional",
-            "H5VL_provenance_request_free",
+            "H5VL_demo_init",                         /* initialize   */
+            "H5VL_demo_term",                         /* terminate    */
+            "H5VL_demo_info_copy",                /* info copy    */
+            "H5VL_demo_info_cmp",                 /* info compare */
+            "H5VL_demo_info_free",                /* info free    */
+            "H5VL_demo_info_to_str",              /* info to str  */
+            "H5VL_demo_str_to_info",              /* str to info  */
+            "H5VL_demo_get_object",               /* get_object   */
+            "H5VL_demo_get_wrap_ctx",             /* get_wrap_ctx */
+            "H5VL_demo_wrap_object",              /* wrap_object  */
+            "H5VL_demo_unwrap_object",            /* unwrap_object  */
+            "H5VL_demo_free_wrap_ctx",            /* free_wrap_ctx */
+            "H5VL_demo_attr_create",                       /* create */
+            "H5VL_demo_attr_open",                         /* open */
+            "H5VL_demo_attr_read",                         /* read */
+            "H5VL_demo_attr_write",                        /* write */
+            "H5VL_demo_attr_get",                          /* get */
+            "H5VL_demo_attr_specific",                     /* specific */
+            "H5VL_demo_attr_optional",                     /* optional */
+            "H5VL_demo_attr_close",                         /* close */
+            "H5VL_demo_dataset_create",                    /* create */
+            "H5VL_demo_dataset_open",                      /* open */
+            "H5VL_demo_dataset_read",                      /* read */
+            "H5VL_demo_dataset_write",                     /* write */
+            "H5VL_demo_dataset_get",                       /* get */
+            "H5VL_demo_dataset_specific",                  /* specific */
+            "H5VL_demo_dataset_optional",                  /* optional */
+            "H5VL_demo_dataset_close",                      /* close */
+            "H5VL_demo_datatype_commit",                   /* commit */
+            "H5VL_demo_datatype_open",                     /* open */
+            "H5VL_demo_datatype_get",                      /* get_size */
+            "H5VL_demo_datatype_specific",                 /* specific */
+            "H5VL_demo_datatype_optional",                 /* optional */
+            "H5VL_demo_datatype_close",                     /* close */
+            "H5VL_demo_file_create",                       /* create */
+            "H5VL_demo_file_open",                         /* open */
+            "H5VL_demo_file_get",                          /* get */
+            "H5VL_demo_file_specific",                     /* specific */
+            "H5VL_demo_file_optional",                     /* optional */
+            "H5VL_demo_file_close",                         /* close */
+            "H5VL_demo_group_create",                      /* create */
+            "H5VL_demo_group_open",                        /* open */
+            "H5VL_demo_group_get",                         /* get */
+            "H5VL_demo_group_specific",                    /* specific */
+            "H5VL_demo_group_optional",                    /* optional */
+            "H5VL_demo_group_close",                        /* close */
+            "H5VL_demo_link_create",                       /* create */
+            "H5VL_demo_link_copy",                         /* copy */
+            "H5VL_demo_link_move",                         /* move */
+            "H5VL_demo_link_get",                          /* get */
+            "H5VL_demo_link_specific",                     /* specific */
+            "H5VL_demo_link_optional",                     /* optional */
+            "H5VL_demo_object_open",                       /* open */
+            "H5VL_demo_object_copy",                       /* copy */
+            "H5VL_demo_object_get",                        /* get */
+            "H5VL_demo_object_specific",                   /* specific */
+            "H5VL_demo_object_optional",                   /* optional */
+            "H5VL_demo_request_wait",                      /* wait */
+            "H5VL_demo_request_notify",
+            "H5VL_demo_request_cancel",
+            "H5VL_demo_request_specific",
+            "H5VL_demo_request_optional",
+            "H5VL_demo_request_free",
     };
     int size = sizeof(preset_dic) / sizeof(const char*);
     int key_space[1000];
@@ -1740,7 +1492,7 @@ void _preset_dic_print(void){
 int prov_write(prov_helper_t* helper_in, const char* msg, unsigned long duration){
 //    assert(strcmp(msg, "root_file_info"));
     unsigned long start = get_time_usec();
-    const char* base = "H5VL_provenance_";
+    const char* base = "H5VL_demo_";
     size_t base_len;
     size_t msg_len;
     char time[64];
@@ -1753,7 +1505,7 @@ int prov_write(prov_helper_t* helper_in, const char* msg, unsigned long duration
     /* Trimming long VOL function names */
     base_len = strlen(base);
     msg_len = strlen(msg);
-    if(msg_len > base_len) {//strlen(H5VL_provenance_) == 16.
+    if(msg_len > base_len) {//strlen(H5VL_demo_) == 16.
         size_t i = 0;
 
         for(; i < base_len; i++)
@@ -1795,7 +1547,7 @@ int prov_write(prov_helper_t* helper_in, const char* msg, unsigned long duration
 }
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL__provenance_new_obj
+ * Function:    H5VL__demo_new_obj
  *
  * Purpose:     Create a new pass through object for an underlying object
  *
@@ -1807,16 +1559,16 @@ int prov_write(prov_helper_t* helper_in, const char* msg, unsigned long duration
  *
  *-------------------------------------------------------------------------
  */
-static H5VL_provenance_t *
-H5VL_provenance_new_obj(void *under_obj, hid_t under_vol_id, prov_helper_t* helper)
+static H5VL_demo_t *
+H5VL_demo_new_obj(void *under_obj, hid_t under_vol_id, prov_helper_t* helper)
 {
 //    unsigned long start = get_time_usec();
-    H5VL_provenance_t *new_obj;
+    H5VL_demo_t *new_obj;
 
     assert(under_vol_id);
     assert(helper);
 
-    new_obj = (H5VL_provenance_t *)calloc(1, sizeof(H5VL_provenance_t));
+    new_obj = (H5VL_demo_t *)calloc(1, sizeof(H5VL_demo_t));
     new_obj->under_object = under_obj;
     new_obj->under_vol_id = under_vol_id;
     new_obj->prov_helper = helper;
@@ -1824,11 +1576,11 @@ H5VL_provenance_new_obj(void *under_obj, hid_t under_vol_id, prov_helper_t* help
     H5Iinc_ref(new_obj->under_vol_id);
     //TOTAL_PROV_OVERHEAD += (get_time_usec() - start);
     return new_obj;
-} /* end H5VL__provenance_new_obj() */
+} /* end H5VL__demo_new_obj() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL__provenance_free_obj
+ * Function:    H5VL__demo_free_obj
  *
  * Purpose:     Release a pass through object
  *
@@ -1841,7 +1593,7 @@ H5VL_provenance_new_obj(void *under_obj, hid_t under_vol_id, prov_helper_t* help
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5VL_provenance_free_obj(H5VL_provenance_t *obj)
+H5VL_demo_free_obj(H5VL_demo_t *obj)
 {
     //unsigned long start = get_time_usec();
     hid_t err_id;
@@ -1859,11 +1611,11 @@ H5VL_provenance_free_obj(H5VL_provenance_t *obj)
     free(obj);
     //TOTAL_PROV_OVERHEAD += (get_time_usec() - start);
     return 0;
-} /* end H5VL__provenance_free_obj() */
+} /* end H5VL__demo_free_obj() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_provenance_register
+ * Function:    H5VL_demo_register
  *
  * Purpose:     Register the pass-through VOL connector and retrieve an ID
  *              for it.
@@ -1877,7 +1629,7 @@ H5VL_provenance_free_obj(H5VL_provenance_t *obj)
  *-------------------------------------------------------------------------
  */
 hid_t
-H5VL_provenance_register(void)
+H5VL_demo_register(void)
 {
     unsigned long start = get_time_usec();
 
@@ -1886,15 +1638,15 @@ H5VL_provenance_register(void)
 
     /* Singleton register the pass-through VOL connector ID */
     if(H5I_VOL != H5Iget_type(prov_connector_id_global))
-        prov_connector_id_global = H5VLregister_connector(&H5VL_provenance_cls, H5P_DEFAULT);
+        prov_connector_id_global = H5VLregister_connector(&H5VL_demo_cls, H5P_DEFAULT);
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start);
     return prov_connector_id_global;
-} /* end H5VL_provenance_register() */
+} /* end H5VL_demo_register() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_provenance_init
+ * Function:    H5VL_demo_init
  *
  * Purpose:     Initialize this VOL connector, performing any necessary
  *              operations for the connector that will apply to all containers
@@ -1906,7 +1658,7 @@ H5VL_provenance_register(void)
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5VL_provenance_init(hid_t vipl_id)
+H5VL_demo_init(hid_t vipl_id)
 {
 
 #ifdef ENABLE_PROVNC_LOGGING
@@ -1924,11 +1676,11 @@ H5VL_provenance_init(hid_t vipl_id)
     vipl_id = vipl_id;
 
     return 0;
-} /* end H5VL_provenance_init() */
+} /* end H5VL_demo_init() */
 
 
 /*---------------------------------------------------------------------------
- * Function:    H5VL_provenance_term
+ * Function:    H5VL_demo_term
  *
  * Purpose:     Terminate this VOL connector, performing any necessary
  *              operations for the connector that release connector-wide
@@ -1941,7 +1693,7 @@ H5VL_provenance_init(hid_t vipl_id)
  *---------------------------------------------------------------------------
  */
 static herr_t
-H5VL_provenance_term(void)
+H5VL_demo_term(void)
 {
 
 #ifdef ENABLE_PROVNC_LOGGING
@@ -1955,11 +1707,11 @@ H5VL_provenance_term(void)
     prov_connector_id_global = H5I_INVALID_HID;
 
     return 0;
-} /* end H5VL_provenance_term() */
+} /* end H5VL_demo_term() */
 
 
 /*---------------------------------------------------------------------------
- * Function:    H5VL_provenance_info_copy
+ * Function:    H5VL_demo_info_copy
  *
  * Purpose:     Duplicate the connector's info object.
  *
@@ -1969,19 +1721,19 @@ H5VL_provenance_term(void)
  *---------------------------------------------------------------------------
  */
 static void *
-H5VL_provenance_info_copy(const void *_info)
+H5VL_demo_info_copy(const void *_info)
 {
     unsigned long start = get_time_usec();
 
-    const H5VL_provenance_info_t *info = (const H5VL_provenance_info_t *)_info;
-    H5VL_provenance_info_t *new_info;
+    const H5VL_demo_info_t *info = (const H5VL_demo_info_t *)_info;
+    H5VL_demo_info_t *new_info;
 
 #ifdef ENABLE_PROVNC_LOGGING
     printf("------- PASS THROUGH VOL INFO Copy\n");
 #endif
 
     /* Allocate new VOL info struct for the pass through connector */
-    new_info = (H5VL_provenance_info_t *)calloc(1, sizeof(H5VL_provenance_info_t));
+    new_info = (H5VL_demo_info_t *)calloc(1, sizeof(H5VL_demo_info_t));
 
     /* Increment reference count on underlying VOL ID, and copy the VOL info */
     new_info->under_vol_id = info->under_vol_id;
@@ -1999,11 +1751,11 @@ H5VL_provenance_info_copy(const void *_info)
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start);
     return new_info;
-} /* end H5VL_provenance_info_copy() */
+} /* end H5VL_demo_info_copy() */
 
 
 /*---------------------------------------------------------------------------
- * Function:    H5VL_provenance_info_cmp
+ * Function:    H5VL_demo_info_cmp
  *
  * Purpose:     Compare two of the connector's info objects, setting *cmp_value,
  *              following the same rules as strcmp().
@@ -2014,12 +1766,12 @@ H5VL_provenance_info_copy(const void *_info)
  *---------------------------------------------------------------------------
  */
 static herr_t
-H5VL_provenance_info_cmp(int *cmp_value, const void *_info1, const void *_info2)
+H5VL_demo_info_cmp(int *cmp_value, const void *_info1, const void *_info2)
 {
     unsigned long start = get_time_usec();
 
-    const H5VL_provenance_info_t *info1 = (const H5VL_provenance_info_t *)_info1;
-    const H5VL_provenance_info_t *info2 = (const H5VL_provenance_info_t *)_info2;
+    const H5VL_demo_info_t *info1 = (const H5VL_demo_info_t *)_info1;
+    const H5VL_demo_info_t *info2 = (const H5VL_demo_info_t *)_info2;
 
 #ifdef ENABLE_PROVNC_LOGGING
     printf("------- PASS THROUGH VOL INFO Compare\n");
@@ -2067,11 +1819,11 @@ H5VL_provenance_info_cmp(int *cmp_value, const void *_info1, const void *_info2)
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start);
 
     return 0;
-} /* end H5VL_provenance_info_cmp() */
+} /* end H5VL_demo_info_cmp() */
 
 
 /*---------------------------------------------------------------------------
- * Function:    H5VL_provenance_info_free
+ * Function:    H5VL_demo_info_free
  *
  * Purpose:     Release an info object for the connector.
  *
@@ -2081,11 +1833,11 @@ H5VL_provenance_info_cmp(int *cmp_value, const void *_info1, const void *_info2)
  *---------------------------------------------------------------------------
  */
 static herr_t
-H5VL_provenance_info_free(void *_info)
+H5VL_demo_info_free(void *_info)
 {
     unsigned long start = get_time_usec();
 
-    H5VL_provenance_info_t *info = (H5VL_provenance_info_t *)_info;
+    H5VL_demo_info_t *info = (H5VL_demo_info_t *)_info;
     hid_t err_id;
 
 #ifdef ENABLE_PROVNC_LOGGING
@@ -2107,11 +1859,11 @@ H5VL_provenance_info_free(void *_info)
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start);
     return 0;
-} /* end H5VL_provenance_info_free() */
+} /* end H5VL_demo_info_free() */
 
 
 /*---------------------------------------------------------------------------
- * Function:    H5VL_provenance_info_to_str
+ * Function:    H5VL_demo_info_to_str
  *
  * Purpose:     Serialize an info object for this connector into a string
  *
@@ -2121,9 +1873,9 @@ H5VL_provenance_info_free(void *_info)
  *---------------------------------------------------------------------------
  */
 static herr_t
-H5VL_provenance_info_to_str(const void *_info, char **str)
+H5VL_demo_info_to_str(const void *_info, char **str)
 {
-    const H5VL_provenance_info_t *info = (const H5VL_provenance_info_t *)_info;
+    const H5VL_demo_info_t *info = (const H5VL_demo_info_t *)_info;
     H5VL_class_value_t under_value = (H5VL_class_value_t)-1;
     char *under_vol_string = NULL;
     size_t under_vol_str_len = 0;
@@ -2161,9 +1913,9 @@ H5VL_provenance_info_to_str(const void *_info, char **str)
             (unsigned)under_value, (under_vol_string ? under_vol_string : ""), info->prov_file_path, info->prov_level, info->prov_line_format);
 
     return 0;
-} /* end H5VL_provenance_info_to_str() */
+} /* end H5VL_demo_info_to_str() */
 
-herr_t provenance_file_setup(const char* str_in, char* file_path_out, Prov_level* level_out, char* format_out){
+herr_t demo_file_setup(const char* str_in, char* file_path_out, Prov_level* level_out, char* format_out){
     //acceptable format: path=$path_str;level=$level_int;format=$format_str
     char tmp_str[100] = {'\0'};
     char* toklist[4] = {NULL};
@@ -2193,7 +1945,7 @@ herr_t provenance_file_setup(const char* str_in, char* file_path_out, Prov_level
 
 
 /*---------------------------------------------------------------------------
- * Function:    H5VL_provenance_str_to_info
+ * Function:    H5VL_demo_str_to_info
  *
  * Purpose:     Deserialize a string into an info object for this connector.
  *
@@ -2203,9 +1955,9 @@ herr_t provenance_file_setup(const char* str_in, char* file_path_out, Prov_level
  *---------------------------------------------------------------------------
  */
 static herr_t
-H5VL_provenance_str_to_info(const char *str, void **_info)
+H5VL_demo_str_to_info(const char *str, void **_info)
 {
-    H5VL_provenance_info_t *info;
+    H5VL_demo_info_t *info;
     unsigned under_vol_value;
     const char *under_vol_info_start, *under_vol_info_end;
     hid_t under_vol_id;
@@ -2233,14 +1985,14 @@ H5VL_provenance_str_to_info(const char *str, void **_info)
     } /* end else */
 
     /* Allocate new pass-through VOL connector info and set its fields */
-    info = (H5VL_provenance_info_t *)calloc(1, sizeof(H5VL_provenance_info_t));
+    info = (H5VL_demo_info_t *)calloc(1, sizeof(H5VL_demo_info_t));
     info->under_vol_id = under_vol_id;
     info->under_vol_info = under_vol_info;
 
     info->prov_file_path = (char *)calloc(64, sizeof(char));
     info->prov_line_format = (char *)calloc(64, sizeof(char));
 
-    if(provenance_file_setup(under_vol_info_end, info->prov_file_path, &(info->prov_level), info->prov_line_format) != 0){
+    if(demo_file_setup(under_vol_info_end, info->prov_file_path, &(info->prov_level), info->prov_line_format) != 0){
         free(info->prov_file_path);
         free(info->prov_line_format);
         info->prov_line_format = NULL;
@@ -2255,11 +2007,11 @@ H5VL_provenance_str_to_info(const char *str, void **_info)
         free(under_vol_info_str);
 
     return 0;
-} /* end H5VL_provenance_str_to_info() */
+} /* end H5VL_demo_str_to_info() */
 
 
 /*---------------------------------------------------------------------------
- * Function:    H5VL_provenance_get_object
+ * Function:    H5VL_demo_get_object
  *
  * Purpose:     Retrieve the 'data' for a VOL object.
  *
@@ -2269,9 +2021,9 @@ H5VL_provenance_str_to_info(const char *str, void **_info)
  *---------------------------------------------------------------------------
  */
 static void *
-H5VL_provenance_get_object(const void *obj)
+H5VL_demo_get_object(const void *obj)
 {
-    const H5VL_provenance_t *o = (const H5VL_provenance_t *)obj;
+    const H5VL_demo_t *o = (const H5VL_demo_t *)obj;
     void* ret;
 
 #ifdef ENABLE_PROVNC_LOGGING
@@ -2282,11 +2034,11 @@ H5VL_provenance_get_object(const void *obj)
 
     return ret;
 
-} /* end H5VL_provenance_get_object() */
+} /* end H5VL_demo_get_object() */
 
 
 /*---------------------------------------------------------------------------
- * Function:    H5VL_provenance_get_wrap_ctx
+ * Function:    H5VL_demo_get_wrap_ctx
  *
  * Purpose:     Retrieve a "wrapper context" for an object
  *
@@ -2296,13 +2048,13 @@ H5VL_provenance_get_object(const void *obj)
  *---------------------------------------------------------------------------
  */
 static herr_t
-H5VL_provenance_get_wrap_ctx(const void *obj, void **wrap_ctx)
+H5VL_demo_get_wrap_ctx(const void *obj, void **wrap_ctx)
 {
     unsigned long start = get_time_usec();
     unsigned long m1, m2;
 
-    const H5VL_provenance_t *o = (const H5VL_provenance_t *)obj;
-    H5VL_provenance_wrap_ctx_t *new_wrap_ctx;
+    const H5VL_demo_t *o = (const H5VL_demo_t *)obj;
+    H5VL_demo_wrap_ctx_t *new_wrap_ctx;
 
 #ifdef ENABLE_PROVNC_LOGGING
     printf("------- PASS THROUGH VOL WRAP CTX Get\n");
@@ -2311,7 +2063,7 @@ H5VL_provenance_get_wrap_ctx(const void *obj, void **wrap_ctx)
     assert(o->my_type != 0);
 
     /* Allocate new VOL object wrapping context for the pass through connector */
-    new_wrap_ctx = (H5VL_provenance_wrap_ctx_t *)calloc(1, sizeof(H5VL_provenance_wrap_ctx_t));
+    new_wrap_ctx = (H5VL_demo_wrap_ctx_t *)calloc(1, sizeof(H5VL_demo_wrap_ctx_t));
     switch(o->my_type){
         case H5I_DATASET:
         case H5I_GROUP:
@@ -2356,11 +2108,11 @@ H5VL_provenance_get_wrap_ctx(const void *obj, void **wrap_ctx)
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
     return 0;
-} /* end H5VL_provenance_get_wrap_ctx() */
+} /* end H5VL_demo_get_wrap_ctx() */
 
 
 /*---------------------------------------------------------------------------
- * Function:    H5VL_provenance_wrap_object
+ * Function:    H5VL_demo_wrap_object
  *
  * Purpose:     Use a "wrapper context" to wrap a data object
  *
@@ -2370,15 +2122,15 @@ H5VL_provenance_get_wrap_ctx(const void *obj, void **wrap_ctx)
  *---------------------------------------------------------------------------
  */
 static void *
-H5VL_provenance_wrap_object(void *under_under_in, H5I_type_t obj_type, void *_wrap_ctx_in)
+H5VL_demo_wrap_object(void *under_under_in, H5I_type_t obj_type, void *_wrap_ctx_in)
 {
     unsigned long start = get_time_usec();
     unsigned long m1, m2;
 
     /* Generic object wrapping, make ctx based on types */
-    H5VL_provenance_wrap_ctx_t *wrap_ctx = (H5VL_provenance_wrap_ctx_t *)_wrap_ctx_in;
+    H5VL_demo_wrap_ctx_t *wrap_ctx = (H5VL_demo_wrap_ctx_t *)_wrap_ctx_in;
     void *under;
-    H5VL_provenance_t* new_obj;
+    H5VL_demo_t* new_obj;
 
 #ifdef ENABLE_PROVNC_LOGGING
     printf("------- PASS THROUGH VOL WRAP Object\n");
@@ -2390,7 +2142,7 @@ H5VL_provenance_wrap_object(void *under_under_in, H5I_type_t obj_type, void *_wr
     m2 = get_time_usec();
 
     if(under) {
-        H5VL_provenance_t* fake_upper_o;
+        H5VL_demo_t* fake_upper_o;
 
         fake_upper_o = _fake_obj_new(wrap_ctx->file_info, wrap_ctx->under_vol_id);
 
@@ -2403,11 +2155,11 @@ H5VL_provenance_wrap_object(void *under_under_in, H5I_type_t obj_type, void *_wr
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
     return (void*)new_obj;
-} /* end H5VL_provenance_wrap_object() */
+} /* end H5VL_demo_wrap_object() */
 
 
 /*---------------------------------------------------------------------------
- * Function:    H5VL_provenance_unwrap_object
+ * Function:    H5VL_demo_unwrap_object
  *
  * Purpose:     Unwrap a wrapped data object
  *
@@ -2417,13 +2169,13 @@ H5VL_provenance_wrap_object(void *under_under_in, H5I_type_t obj_type, void *_wr
  *---------------------------------------------------------------------------
  */
 static void *
-H5VL_provenance_unwrap_object(void *obj)
+H5VL_demo_unwrap_object(void *obj)
 {
     unsigned long start = get_time_usec();
     unsigned long m1, m2;
 
     /* Generic object unwrapping, make ctx based on types */
-    H5VL_provenance_t *o = (H5VL_provenance_t *)obj;
+    H5VL_demo_t *o = (H5VL_demo_t *)obj;
     void *under;
 
 #ifdef ENABLE_PROVNC_LOGGING
@@ -2474,16 +2226,16 @@ H5VL_provenance_unwrap_object(void *obj)
         }
 
         // Free the wrapper object
-        H5VL_provenance_free_obj(o);
+        H5VL_demo_free_obj(o);
     }
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
     return under;
-} /* end H5VL_provenance_unwrap_object() */
+} /* end H5VL_demo_unwrap_object() */
 
 
 /*---------------------------------------------------------------------------
- * Function:    H5VL_provenance_free_wrap_ctx
+ * Function:    H5VL_demo_free_wrap_ctx
  *
  * Purpose:     Release a "wrapper context" for an object
  *
@@ -2493,11 +2245,11 @@ H5VL_provenance_unwrap_object(void *obj)
  *---------------------------------------------------------------------------
  */
 static herr_t
-H5VL_provenance_free_wrap_ctx(void *_wrap_ctx)
+H5VL_demo_free_wrap_ctx(void *_wrap_ctx)
 {
     unsigned long start = get_time_usec();
 
-    H5VL_provenance_wrap_ctx_t *wrap_ctx = (H5VL_provenance_wrap_ctx_t *)_wrap_ctx;
+    H5VL_demo_wrap_ctx_t *wrap_ctx = (H5VL_demo_wrap_ctx_t *)_wrap_ctx;
     hid_t err_id;
 
 #ifdef ENABLE_PROVNC_LOGGING
@@ -2521,11 +2273,11 @@ H5VL_provenance_free_wrap_ctx(void *_wrap_ctx)
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start);
     return 0;
-} /* end H5VL_provenance_free_wrap_ctx() */
+} /* end H5VL_demo_free_wrap_ctx() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_provenance_attr_create
+ * Function:    H5VL_demo_attr_create
  *
  * Purpose:     Creates an attribute on an object.
  *
@@ -2535,15 +2287,15 @@ H5VL_provenance_free_wrap_ctx(void *_wrap_ctx)
  *-------------------------------------------------------------------------
  */
 static void *
-H5VL_provenance_attr_create(void *obj, const H5VL_loc_params_t *loc_params,
+H5VL_demo_attr_create(void *obj, const H5VL_loc_params_t *loc_params,
     const char *name, hid_t type_id, hid_t space_id, hid_t acpl_id,
     hid_t aapl_id, hid_t dxpl_id, void **req)
 {
     unsigned long start = get_time_usec();
     unsigned long m1, m2;
 
-    H5VL_provenance_t *attr;
-    H5VL_provenance_t *o = (H5VL_provenance_t *)obj;
+    H5VL_demo_t *attr;
+    H5VL_demo_t *o = (H5VL_demo_t *)obj;
     void *under;
 
 #ifdef ENABLE_PROVNC_LOGGING
@@ -2564,11 +2316,11 @@ H5VL_provenance_attr_create(void *obj, const H5VL_loc_params_t *loc_params,
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
     return (void*)attr;
-} /* end H5VL_provenance_attr_create() */
+} /* end H5VL_demo_attr_create() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_provenance_attr_open
+ * Function:    H5VL_demo_attr_open
  *
  * Purpose:     Opens an attribute on an object.
  *
@@ -2578,14 +2330,14 @@ H5VL_provenance_attr_create(void *obj, const H5VL_loc_params_t *loc_params,
  *-------------------------------------------------------------------------
  */
 static void *
-H5VL_provenance_attr_open(void *obj, const H5VL_loc_params_t *loc_params,
+H5VL_demo_attr_open(void *obj, const H5VL_loc_params_t *loc_params,
     const char *name, hid_t aapl_id, hid_t dxpl_id, void **req)
 {
     unsigned long start = get_time_usec();
     unsigned long m1, m2;
 
-    H5VL_provenance_t *attr;
-    H5VL_provenance_t *o = (H5VL_provenance_t *)obj;
+    H5VL_demo_t *attr;
+    H5VL_demo_t *o = (H5VL_demo_t *)obj;
     void *under;
 
 #ifdef ENABLE_PROVNC_LOGGING
@@ -2631,11 +2383,11 @@ H5VL_provenance_attr_open(void *obj, const H5VL_loc_params_t *loc_params,
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
     return (void *)attr;
-} /* end H5VL_provenance_attr_open() */
+} /* end H5VL_demo_attr_open() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_provenance_attr_read
+ * Function:    H5VL_demo_attr_read
  *
  * Purpose:     Reads data from attribute.
  *
@@ -2645,13 +2397,13 @@ H5VL_provenance_attr_open(void *obj, const H5VL_loc_params_t *loc_params,
  *-------------------------------------------------------------------------
  */
 static herr_t 
-H5VL_provenance_attr_read(void *attr, hid_t mem_type_id, void *buf,
+H5VL_demo_attr_read(void *attr, hid_t mem_type_id, void *buf,
     hid_t dxpl_id, void **req)
 {
     unsigned long start = get_time_usec();
     unsigned long m1, m2;
 
-    H5VL_provenance_t *o = (H5VL_provenance_t *)attr;
+    H5VL_demo_t *o = (H5VL_demo_t *)attr;
     herr_t ret_value;
 
 #ifdef ENABLE_PROVNC_LOGGING
@@ -2664,18 +2416,18 @@ H5VL_provenance_attr_read(void *attr, hid_t mem_type_id, void *buf,
 
     /* Check for async request */
     if(req && *req)
-        *req = H5VL_provenance_new_obj(*req, o->under_vol_id, o->prov_helper);
+        *req = H5VL_demo_new_obj(*req, o->under_vol_id, o->prov_helper);
 
     if(o)
         prov_write(o->prov_helper, __func__, get_time_usec() - start);
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
     return ret_value;
-} /* end H5VL_provenance_attr_read() */
+} /* end H5VL_demo_attr_read() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_provenance_attr_write
+ * Function:    H5VL_demo_attr_write
  *
  * Purpose:     Writes data to attribute.
  *
@@ -2685,13 +2437,13 @@ H5VL_provenance_attr_read(void *attr, hid_t mem_type_id, void *buf,
  *-------------------------------------------------------------------------
  */
 static herr_t 
-H5VL_provenance_attr_write(void *attr, hid_t mem_type_id, const void *buf,
+H5VL_demo_attr_write(void *attr, hid_t mem_type_id, const void *buf,
     hid_t dxpl_id, void **req)
 {
     unsigned long start = get_time_usec();
     unsigned long m1, m2;
 
-    H5VL_provenance_t *o = (H5VL_provenance_t *)attr;
+    H5VL_demo_t *o = (H5VL_demo_t *)attr;
     herr_t ret_value;
 
 #ifdef ENABLE_PROVNC_LOGGING
@@ -2704,18 +2456,18 @@ H5VL_provenance_attr_write(void *attr, hid_t mem_type_id, const void *buf,
 
     /* Check for async request */
     if(req && *req)
-        *req = H5VL_provenance_new_obj(*req, o->under_vol_id, o->prov_helper);
+        *req = H5VL_demo_new_obj(*req, o->under_vol_id, o->prov_helper);
 
     if(o)
         prov_write(o->prov_helper, __func__, get_time_usec() - start);
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
     return ret_value;
-} /* end H5VL_provenance_attr_write() */
+} /* end H5VL_demo_attr_write() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_provenance_attr_get
+ * Function:    H5VL_demo_attr_get
  *
  * Purpose:     Gets information about an attribute
  *
@@ -2725,13 +2477,13 @@ H5VL_provenance_attr_write(void *attr, hid_t mem_type_id, const void *buf,
  *-------------------------------------------------------------------------
  */
 static herr_t 
-H5VL_provenance_attr_get(void *obj, H5VL_attr_get_t get_type, hid_t dxpl_id,
+H5VL_demo_attr_get(void *obj, H5VL_attr_get_t get_type, hid_t dxpl_id,
     void **req, va_list arguments)
 {
     unsigned long start = get_time_usec();
     unsigned long m1, m2;
 
-    H5VL_provenance_t *o = (H5VL_provenance_t *)obj;
+    H5VL_demo_t *o = (H5VL_demo_t *)obj;
     herr_t ret_value;
 
 #ifdef ENABLE_PROVNC_LOGGING
@@ -2744,18 +2496,18 @@ H5VL_provenance_attr_get(void *obj, H5VL_attr_get_t get_type, hid_t dxpl_id,
 
     /* Check for async request */
     if(req && *req)
-        *req = H5VL_provenance_new_obj(*req, o->under_vol_id, o->prov_helper);
+        *req = H5VL_demo_new_obj(*req, o->under_vol_id, o->prov_helper);
 
     if(o)
         prov_write(o->prov_helper, __func__, get_time_usec() - start);
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
     return ret_value;
-} /* end H5VL_provenance_attr_get() */
+} /* end H5VL_demo_attr_get() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_provenance_attr_specific
+ * Function:    H5VL_demo_attr_specific
  *
  * Purpose:     Specific operation on attribute
  *
@@ -2765,13 +2517,13 @@ H5VL_provenance_attr_get(void *obj, H5VL_attr_get_t get_type, hid_t dxpl_id,
  *-------------------------------------------------------------------------
  */
 static herr_t 
-H5VL_provenance_attr_specific(void *obj, const H5VL_loc_params_t *loc_params,
+H5VL_demo_attr_specific(void *obj, const H5VL_loc_params_t *loc_params,
     H5VL_attr_specific_t specific_type, hid_t dxpl_id, void **req, va_list arguments)
 {
     unsigned long start = get_time_usec();
     unsigned long m1, m2;
 
-    H5VL_provenance_t *o = (H5VL_provenance_t *)obj;
+    H5VL_demo_t *o = (H5VL_demo_t *)obj;
     herr_t ret_value;
 
 #ifdef ENABLE_PROVNC_LOGGING
@@ -2784,18 +2536,18 @@ H5VL_provenance_attr_specific(void *obj, const H5VL_loc_params_t *loc_params,
 
     /* Check for async request */
     if(req && *req)
-        *req = H5VL_provenance_new_obj(*req, o->under_vol_id, o->prov_helper);
+        *req = H5VL_demo_new_obj(*req, o->under_vol_id, o->prov_helper);
 
     if(o)
         prov_write(o->prov_helper, __func__, get_time_usec() - start);
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
     return ret_value;
-} /* end H5VL_provenance_attr_specific() */
+} /* end H5VL_demo_attr_specific() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_provenance_attr_optional
+ * Function:    H5VL_demo_attr_optional
  *
  * Purpose:     Perform a connector-specific operation on an attribute
  *
@@ -2805,13 +2557,13 @@ H5VL_provenance_attr_specific(void *obj, const H5VL_loc_params_t *loc_params,
  *-------------------------------------------------------------------------
  */
 static herr_t 
-H5VL_provenance_attr_optional(void *obj, hid_t dxpl_id, void **req,
+H5VL_demo_attr_optional(void *obj, hid_t dxpl_id, void **req,
     va_list arguments)
 {
     unsigned long start = get_time_usec();
     unsigned long m1, m2;
 
-    H5VL_provenance_t *o = (H5VL_provenance_t *)obj;
+    H5VL_demo_t *o = (H5VL_demo_t *)obj;
     herr_t ret_value;
 
 #ifdef ENABLE_PROVNC_LOGGING
@@ -2824,18 +2576,18 @@ H5VL_provenance_attr_optional(void *obj, hid_t dxpl_id, void **req,
 
     /* Check for async request */
     if(req && *req)
-        *req = H5VL_provenance_new_obj(*req, o->under_vol_id, o->prov_helper);
+        *req = H5VL_demo_new_obj(*req, o->under_vol_id, o->prov_helper);
 
     if(o)
         prov_write(o->prov_helper, __func__, get_time_usec() - start);
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
     return ret_value;
-} /* end H5VL_provenance_attr_optional() */
+} /* end H5VL_demo_attr_optional() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_provenance_attr_close
+ * Function:    H5VL_demo_attr_close
  *
  * Purpose:     Closes an attribute.
  *
@@ -2845,12 +2597,12 @@ H5VL_provenance_attr_optional(void *obj, hid_t dxpl_id, void **req,
  *-------------------------------------------------------------------------
  */
 static herr_t 
-H5VL_provenance_attr_close(void *attr, hid_t dxpl_id, void **req)
+H5VL_demo_attr_close(void *attr, hid_t dxpl_id, void **req)
 {
     unsigned long start = get_time_usec();
     unsigned long m1, m2;
 
-    H5VL_provenance_t *o = (H5VL_provenance_t *)attr;
+    H5VL_demo_t *o = (H5VL_demo_t *)attr;
     herr_t ret_value;
 
 #ifdef ENABLE_PROVNC_LOGGING
@@ -2863,7 +2615,7 @@ H5VL_provenance_attr_close(void *attr, hid_t dxpl_id, void **req)
 
     /* Check for async request */
     if(req && *req)
-        *req = H5VL_provenance_new_obj(*req, o->under_vol_id, o->prov_helper);
+        *req = H5VL_demo_new_obj(*req, o->under_vol_id, o->prov_helper);
 
     if(o)
         prov_write(o->prov_helper, __func__, get_time_usec() - start);
@@ -2878,16 +2630,16 @@ H5VL_provenance_attr_close(void *attr, hid_t dxpl_id, void **req)
         attribute_stats_prov_write(attr_info);
 
         rm_attr_node(o->prov_helper, attr_info);
-        H5VL_provenance_free_obj(o);
+        H5VL_demo_free_obj(o);
     }
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
     return ret_value;
-} /* end H5VL_provenance_attr_close() */
+} /* end H5VL_demo_attr_close() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_provenance_dataset_create
+ * Function:    H5VL_demo_dataset_create
  *
  * Purpose:     Creates a dataset in a container
  *
@@ -2897,15 +2649,15 @@ H5VL_provenance_attr_close(void *attr, hid_t dxpl_id, void **req)
  *-------------------------------------------------------------------------
  */
 static void *
-H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
+H5VL_demo_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
     const char *ds_name, hid_t lcpl_id, hid_t type_id, hid_t space_id,
     hid_t dcpl_id, hid_t dapl_id, hid_t dxpl_id, void **req)
 {
     unsigned long start = get_time_usec();
     unsigned long m1, m2;
 
-    H5VL_provenance_t *dset;
-    H5VL_provenance_t *o = (H5VL_provenance_t *)obj;
+    H5VL_demo_t *dset;
+    H5VL_demo_t *o = (H5VL_demo_t *)obj;
     void *under;
 
 #ifdef ENABLE_PROVNC_LOGGING
@@ -2926,11 +2678,11 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
     return (void *)dset;
-} /* end H5VL_provenance_dataset_create() */
+} /* end H5VL_demo_dataset_create() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_provenance_dataset_open
+ * Function:    H5VL_demo_dataset_open
  *
  * Purpose:     Opens a dataset in a container
  *
@@ -2940,15 +2692,15 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
  *-------------------------------------------------------------------------
  */
 static void *
-H5VL_provenance_dataset_open(void *obj, const H5VL_loc_params_t *loc_params,
+H5VL_demo_dataset_open(void *obj, const H5VL_loc_params_t *loc_params,
     const char *ds_name, hid_t dapl_id, hid_t dxpl_id, void **req)
 {
     unsigned long start = get_time_usec();
     unsigned long m1, m2;
 
     void *under;
-    H5VL_provenance_t *dset;
-    H5VL_provenance_t *o = (H5VL_provenance_t *)obj;
+    H5VL_demo_t *dset;
+    H5VL_demo_t *o = (H5VL_demo_t *)obj;
 
 #ifdef ENABLE_PROVNC_LOGGING
     printf("------- PASS THROUGH VOL DATASET Open\n");
@@ -2968,11 +2720,11 @@ H5VL_provenance_dataset_open(void *obj, const H5VL_loc_params_t *loc_params,
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
     return (void *)dset;
-} /* end H5VL_provenance_dataset_open() */
+} /* end H5VL_demo_dataset_open() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_provenance_dataset_read
+ * Function:    H5VL_demo_dataset_read
  *
  * Purpose:     Reads data elements from a dataset into a buffer.
  *
@@ -2982,13 +2734,13 @@ H5VL_provenance_dataset_open(void *obj, const H5VL_loc_params_t *loc_params,
  *-------------------------------------------------------------------------
  */
 static herr_t 
-H5VL_provenance_dataset_read(void *dset, hid_t mem_type_id, hid_t mem_space_id,
+H5VL_demo_dataset_read(void *dset, hid_t mem_type_id, hid_t mem_space_id,
     hid_t file_space_id, hid_t plist_id, void *buf, void **req)
 {
     unsigned long start = get_time_usec();
     unsigned long m1, m2;
 
-    H5VL_provenance_t *o = (H5VL_provenance_t *)dset;
+    H5VL_demo_t *o = (H5VL_demo_t *)dset;
 #ifdef H5_HAVE_PARALLEL
     H5FD_mpio_xfer_t xfer_mode = H5FD_MPIO_INDEPENDENT;
 #endif /* H5_HAVE_PARALLEL */
@@ -3009,7 +2761,7 @@ H5VL_provenance_dataset_read(void *dset, hid_t mem_type_id, hid_t mem_space_id,
 
     /* Check for async request */
     if(req && *req)
-        *req = H5VL_provenance_new_obj(*req, o->under_vol_id, o->prov_helper);
+        *req = H5VL_demo_new_obj(*req, o->under_vol_id, o->prov_helper);
 
     if(ret_value >= 0) {
         dataset_prov_info_t * dset_info = (dataset_prov_info_t*)o->generic_prov_info;
@@ -3047,11 +2799,11 @@ H5VL_provenance_dataset_read(void *dset, hid_t mem_type_id, hid_t mem_space_id,
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
     return ret_value;
-} /* end H5VL_provenance_dataset_read() */
+} /* end H5VL_demo_dataset_read() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_provenance_dataset_write
+ * Function:    H5VL_demo_dataset_write
  *
  * Purpose:     Writes data elements from a buffer into a dataset.
  *
@@ -3061,13 +2813,13 @@ H5VL_provenance_dataset_read(void *dset, hid_t mem_type_id, hid_t mem_space_id,
  *-------------------------------------------------------------------------
  */
 static herr_t 
-H5VL_provenance_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id,
+H5VL_demo_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id,
     hid_t file_space_id, hid_t plist_id, const void *buf, void **req)
 {
     unsigned long start = get_time_usec();
     unsigned long m1, m2;
 
-    H5VL_provenance_t *o = (H5VL_provenance_t *)dset;
+    H5VL_demo_t *o = (H5VL_demo_t *)dset;
 #ifdef H5_HAVE_PARALLEL
     H5FD_mpio_xfer_t xfer_mode = H5FD_MPIO_INDEPENDENT;
 #endif /* H5_HAVE_PARALLEL */
@@ -3090,7 +2842,7 @@ H5VL_provenance_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id,
 
     /* Check for async request */
     if(req && *req)
-        *req = H5VL_provenance_new_obj(*req, o->under_vol_id, o->prov_helper);
+        *req = H5VL_demo_new_obj(*req, o->under_vol_id, o->prov_helper);
 
     if(ret_value >= 0) {
         dataset_prov_info_t * dset_info = (dataset_prov_info_t*)o->generic_prov_info;
@@ -3128,11 +2880,11 @@ H5VL_provenance_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id,
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
     return ret_value;
-} /* end H5VL_provenance_dataset_write() */
+} /* end H5VL_demo_dataset_write() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_provenance_dataset_get
+ * Function:    H5VL_demo_dataset_get
  *
  * Purpose:     Gets information about a dataset
  *
@@ -3142,13 +2894,13 @@ H5VL_provenance_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id,
  *-------------------------------------------------------------------------
  */
 static herr_t 
-H5VL_provenance_dataset_get(void *dset, H5VL_dataset_get_t get_type,
+H5VL_demo_dataset_get(void *dset, H5VL_dataset_get_t get_type,
     hid_t dxpl_id, void **req, va_list arguments)
 {
     unsigned long start = get_time_usec();
     unsigned long m1, m2;
 
-    H5VL_provenance_t *o = (H5VL_provenance_t *)dset;
+    H5VL_demo_t *o = (H5VL_demo_t *)dset;
     herr_t ret_value;
 
 #ifdef ENABLE_PROVNC_LOGGING
@@ -3161,18 +2913,18 @@ H5VL_provenance_dataset_get(void *dset, H5VL_dataset_get_t get_type,
 
     /* Check for async request */
     if(req && *req)
-        *req = H5VL_provenance_new_obj(*req, o->under_vol_id, o->prov_helper);
+        *req = H5VL_demo_new_obj(*req, o->under_vol_id, o->prov_helper);
 
     if(o)
         prov_write(o->prov_helper, __func__, get_time_usec() - start);
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
     return ret_value;
-} /* end H5VL_provenance_dataset_get() */
+} /* end H5VL_demo_dataset_get() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_provenance_dataset_specific
+ * Function:    H5VL_demo_dataset_specific
  *
  * Purpose:     Specific operation on a dataset
  *
@@ -3182,13 +2934,13 @@ H5VL_provenance_dataset_get(void *dset, H5VL_dataset_get_t get_type,
  *-------------------------------------------------------------------------
  */
 static herr_t 
-H5VL_provenance_dataset_specific(void *obj, H5VL_dataset_specific_t specific_type,
+H5VL_demo_dataset_specific(void *obj, H5VL_dataset_specific_t specific_type,
     hid_t dxpl_id, void **req, va_list arguments)
 {
     unsigned long start = get_time_usec();
     unsigned long m1, m2;
 
-    H5VL_provenance_t *o = (H5VL_provenance_t *)obj;
+    H5VL_demo_t *o = (H5VL_demo_t *)obj;
     hid_t under_vol_id = -1;
     prov_helper_t *helper = NULL;
     va_list my_arguments;
@@ -3290,17 +3042,17 @@ H5VL_provenance_dataset_specific(void *obj, H5VL_dataset_specific_t specific_typ
 
     /* Check for async request */
     if(req && *req)
-        *req = H5VL_provenance_new_obj(*req, under_vol_id, helper);
+        *req = H5VL_demo_new_obj(*req, under_vol_id, helper);
 
     prov_write(helper, __func__, get_time_usec() - start);
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
     return ret_value;
-} /* end H5VL_provenance_dataset_specific() */
+} /* end H5VL_demo_dataset_specific() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_provenance_dataset_optional
+ * Function:    H5VL_demo_dataset_optional
  *
  * Purpose:     Perform a connector-specific operation on a dataset
  *
@@ -3310,13 +3062,13 @@ H5VL_provenance_dataset_specific(void *obj, H5VL_dataset_specific_t specific_typ
  *-------------------------------------------------------------------------
  */
 static herr_t 
-H5VL_provenance_dataset_optional(void *obj, hid_t dxpl_id, void **req,
+H5VL_demo_dataset_optional(void *obj, hid_t dxpl_id, void **req,
     va_list arguments)
 {
     unsigned long start = get_time_usec();
     unsigned long m1, m2;
 
-    H5VL_provenance_t *o = (H5VL_provenance_t *)obj;
+    H5VL_demo_t *o = (H5VL_demo_t *)obj;
     herr_t ret_value;
 
 #ifdef ENABLE_PROVNC_LOGGING
@@ -3329,18 +3081,18 @@ H5VL_provenance_dataset_optional(void *obj, hid_t dxpl_id, void **req,
 
     /* Check for async request */
     if(req && *req)
-        *req = H5VL_provenance_new_obj(*req, o->under_vol_id, o->prov_helper);
+        *req = H5VL_demo_new_obj(*req, o->under_vol_id, o->prov_helper);
 
     if(o)
         prov_write(o->prov_helper, __func__, get_time_usec() - start);
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
     return ret_value;
-} /* end H5VL_provenance_dataset_optional() */
+} /* end H5VL_demo_dataset_optional() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_provenance_dataset_close
+ * Function:    H5VL_demo_dataset_close
  *
  * Purpose:     Closes a dataset.
  *
@@ -3350,12 +3102,12 @@ H5VL_provenance_dataset_optional(void *obj, hid_t dxpl_id, void **req,
  *-------------------------------------------------------------------------
  */
 static herr_t 
-H5VL_provenance_dataset_close(void *dset, hid_t dxpl_id, void **req)
+H5VL_demo_dataset_close(void *dset, hid_t dxpl_id, void **req)
 {
     unsigned long start = get_time_usec();
     unsigned long m1, m2;
 
-    H5VL_provenance_t *o = (H5VL_provenance_t *)dset;
+    H5VL_demo_t *o = (H5VL_demo_t *)dset;
     herr_t ret_value;
 
 #ifdef ENABLE_PROVNC_LOGGING
@@ -3368,7 +3120,7 @@ H5VL_provenance_dataset_close(void *dset, hid_t dxpl_id, void **req)
 
     /* Check for async request */
     if(req && *req)
-        *req = H5VL_provenance_new_obj(*req, o->under_vol_id, o->prov_helper);
+        *req = H5VL_demo_new_obj(*req, o->under_vol_id, o->prov_helper);
 
     /* Release our wrapper, if underlying dataset was closed */
     if(ret_value >= 0){
@@ -3382,16 +3134,16 @@ H5VL_provenance_dataset_close(void *dset, hid_t dxpl_id, void **req)
 
         rm_dataset_node(o->prov_helper, dset_info);
 
-        H5VL_provenance_free_obj(o);
+        H5VL_demo_free_obj(o);
     }
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
     return ret_value;
-} /* end H5VL_provenance_dataset_close() */
+} /* end H5VL_demo_dataset_close() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_provenance_datatype_commit
+ * Function:    H5VL_demo_datatype_commit
  *
  * Purpose:     Commits a datatype inside a container.
  *
@@ -3401,15 +3153,15 @@ H5VL_provenance_dataset_close(void *dset, hid_t dxpl_id, void **req)
  *-------------------------------------------------------------------------
  */
 static void *
-H5VL_provenance_datatype_commit(void *obj, const H5VL_loc_params_t *loc_params,
+H5VL_demo_datatype_commit(void *obj, const H5VL_loc_params_t *loc_params,
     const char *name, hid_t type_id, hid_t lcpl_id, hid_t tcpl_id, hid_t tapl_id,
     hid_t dxpl_id, void **req)
 {
     unsigned long start = get_time_usec();
     unsigned long m1, m2;
 
-    H5VL_provenance_t *dt;
-    H5VL_provenance_t *o = (H5VL_provenance_t *)obj;
+    H5VL_demo_t *dt;
+    H5VL_demo_t *o = (H5VL_demo_t *)obj;
     void *under;
 
 #ifdef ENABLE_PROVNC_LOGGING
@@ -3430,11 +3182,11 @@ H5VL_provenance_datatype_commit(void *obj, const H5VL_loc_params_t *loc_params,
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
     return (void *)dt;
-} /* end H5VL_provenance_datatype_commit() */
+} /* end H5VL_demo_datatype_commit() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_provenance_datatype_open
+ * Function:    H5VL_demo_datatype_open
  *
  * Purpose:     Opens a named datatype inside a container.
  *
@@ -3444,14 +3196,14 @@ H5VL_provenance_datatype_commit(void *obj, const H5VL_loc_params_t *loc_params,
  *-------------------------------------------------------------------------
  */
 static void *
-H5VL_provenance_datatype_open(void *obj, const H5VL_loc_params_t *loc_params,
+H5VL_demo_datatype_open(void *obj, const H5VL_loc_params_t *loc_params,
     const char *name, hid_t tapl_id, hid_t dxpl_id, void **req)
 {
     unsigned long start = get_time_usec();
     unsigned long m1, m2;
 
-    H5VL_provenance_t *dt;
-    H5VL_provenance_t *o = (H5VL_provenance_t *)obj;
+    H5VL_demo_t *dt;
+    H5VL_demo_t *o = (H5VL_demo_t *)obj;
     void *under;
 
 #ifdef ENABLE_PROVNC_LOGGING
@@ -3472,11 +3224,11 @@ H5VL_provenance_datatype_open(void *obj, const H5VL_loc_params_t *loc_params,
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
     return (void *)dt;
-} /* end H5VL_provenance_datatype_open() */
+} /* end H5VL_demo_datatype_open() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_provenance_datatype_get
+ * Function:    H5VL_demo_datatype_get
  *
  * Purpose:     Get information about a datatype
  *
@@ -3486,13 +3238,13 @@ H5VL_provenance_datatype_open(void *obj, const H5VL_loc_params_t *loc_params,
  *-------------------------------------------------------------------------
  */
 static herr_t 
-H5VL_provenance_datatype_get(void *dt, H5VL_datatype_get_t get_type,
+H5VL_demo_datatype_get(void *dt, H5VL_datatype_get_t get_type,
     hid_t dxpl_id, void **req, va_list arguments)
 {
     unsigned long start = get_time_usec();
     unsigned long m1, m2;
 
-    H5VL_provenance_t *o = (H5VL_provenance_t *)dt;
+    H5VL_demo_t *o = (H5VL_demo_t *)dt;
     herr_t ret_value;
 
 #ifdef ENABLE_PROVNC_LOGGING
@@ -3505,18 +3257,18 @@ H5VL_provenance_datatype_get(void *dt, H5VL_datatype_get_t get_type,
 
     /* Check for async request */
     if(req && *req)
-        *req = H5VL_provenance_new_obj(*req, o->under_vol_id, o->prov_helper);
+        *req = H5VL_demo_new_obj(*req, o->under_vol_id, o->prov_helper);
 
     if(o)
         prov_write(o->prov_helper, __func__, get_time_usec() - start);
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
     return ret_value;
-} /* end H5VL_provenance_datatype_get() */
+} /* end H5VL_demo_datatype_get() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_provenance_datatype_specific
+ * Function:    H5VL_demo_datatype_specific
  *
  * Purpose:     Specific operations for datatypes
  *
@@ -3526,13 +3278,13 @@ H5VL_provenance_datatype_get(void *dt, H5VL_datatype_get_t get_type,
  *-------------------------------------------------------------------------
  */
 static herr_t 
-H5VL_provenance_datatype_specific(void *obj, H5VL_datatype_specific_t specific_type,
+H5VL_demo_datatype_specific(void *obj, H5VL_datatype_specific_t specific_type,
     hid_t dxpl_id, void **req, va_list arguments)
 {
     unsigned long start = get_time_usec();
     unsigned long m1, m2;
 
-    H5VL_provenance_t *o = (H5VL_provenance_t *)obj;
+    H5VL_demo_t *o = (H5VL_demo_t *)obj;
     hid_t under_vol_id = -1;
     prov_helper_t *helper = NULL;
     va_list my_arguments;
@@ -3592,17 +3344,17 @@ H5VL_provenance_datatype_specific(void *obj, H5VL_datatype_specific_t specific_t
 
     /* Check for async request */
     if(req && *req)
-        *req = H5VL_provenance_new_obj(*req, under_vol_id, helper);
+        *req = H5VL_demo_new_obj(*req, under_vol_id, helper);
 
     prov_write(helper, __func__, get_time_usec() - start);
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
     return ret_value;
-} /* end H5VL_provenance_datatype_specific() */
+} /* end H5VL_demo_datatype_specific() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_provenance_datatype_optional
+ * Function:    H5VL_demo_datatype_optional
  *
  * Purpose:     Perform a connector-specific operation on a datatype
  *
@@ -3612,13 +3364,13 @@ H5VL_provenance_datatype_specific(void *obj, H5VL_datatype_specific_t specific_t
  *-------------------------------------------------------------------------
  */
 static herr_t 
-H5VL_provenance_datatype_optional(void *obj, hid_t dxpl_id, void **req,
+H5VL_demo_datatype_optional(void *obj, hid_t dxpl_id, void **req,
     va_list arguments)
 {
     unsigned long start = get_time_usec();
     unsigned long m1, m2;
 
-    H5VL_provenance_t *o = (H5VL_provenance_t *)obj;
+    H5VL_demo_t *o = (H5VL_demo_t *)obj;
     herr_t ret_value;
 
 #ifdef ENABLE_PROVNC_LOGGING
@@ -3631,18 +3383,18 @@ H5VL_provenance_datatype_optional(void *obj, hid_t dxpl_id, void **req,
 
     /* Check for async request */
     if(req && *req)
-        *req = H5VL_provenance_new_obj(*req, o->under_vol_id, o->prov_helper);
+        *req = H5VL_demo_new_obj(*req, o->under_vol_id, o->prov_helper);
 
     if(o)
         prov_write(o->prov_helper, __func__, get_time_usec() - start);
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
     return ret_value;
-} /* end H5VL_provenance_datatype_optional() */
+} /* end H5VL_demo_datatype_optional() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_provenance_datatype_close
+ * Function:    H5VL_demo_datatype_close
  *
  * Purpose:     Closes a datatype.
  *
@@ -3652,12 +3404,12 @@ H5VL_provenance_datatype_optional(void *obj, hid_t dxpl_id, void **req,
  *-------------------------------------------------------------------------
  */
 static herr_t 
-H5VL_provenance_datatype_close(void *dt, hid_t dxpl_id, void **req)
+H5VL_demo_datatype_close(void *dt, hid_t dxpl_id, void **req)
 {
     unsigned long start = get_time_usec();
     unsigned long m1, m2;
 
-    H5VL_provenance_t *o = (H5VL_provenance_t *)dt;
+    H5VL_demo_t *o = (H5VL_demo_t *)dt;
     herr_t ret_value;
 
 #ifdef ENABLE_PROVNC_LOGGING
@@ -3670,7 +3422,7 @@ H5VL_provenance_datatype_close(void *dt, hid_t dxpl_id, void **req)
 
     /* Check for async request */
     if(req && *req)
-        *req = H5VL_provenance_new_obj(*req, o->under_vol_id, o->prov_helper);
+        *req = H5VL_demo_new_obj(*req, o->under_vol_id, o->prov_helper);
 
     /* Release our wrapper, if underlying datatype was closed */
     if(ret_value >= 0){
@@ -3683,16 +3435,16 @@ H5VL_provenance_datatype_close(void *dt, hid_t dxpl_id, void **req)
 
         rm_dtype_node(PROV_HELPER, info);
 
-        H5VL_provenance_free_obj(o);
+        H5VL_demo_free_obj(o);
     }
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
     return ret_value;
-} /* end H5VL_provenance_datatype_close() */
+} /* end H5VL_demo_datatype_close() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_provenance_file_create
+ * Function:    H5VL_demo_file_create
  *
  * Purpose:     Creates a container using this connector
  *
@@ -3702,15 +3454,22 @@ H5VL_provenance_datatype_close(void *dt, hid_t dxpl_id, void **req)
  *-------------------------------------------------------------------------
  */
 static void *
-H5VL_provenance_file_create(const char *name, unsigned flags, hid_t fcpl_id,
+H5VL_demo_file_create(const char *name, unsigned flags, hid_t fcpl_id,
     hid_t fapl_id, hid_t dxpl_id, void **req)
 {
     unsigned long start = get_time_usec();
     unsigned long m1, m2;
 
-    H5VL_provenance_info_t *info = NULL;
-    H5VL_provenance_t *file;
+    H5VL_demo_info_t *info = NULL;
+    H5VL_demo_t *file;
+    hid_t under_fapl_id = -1;
     void *under;
+#ifdef H5_HAVE_PARALLEL
+    hid_t driver_id;            // VFD driver for file
+    MPI_Comm mpi_comm = MPI_COMM_NULL;  // MPI Comm from FAPL
+    MPI_Info mpi_info = MPI_INFO_NULL;  // MPI Info from FAPL
+    hbool_t have_mpi_comm_info = false;     // Whether the MPI Comm & Info are retrieved
+#endif /* H5_HAVE_PARALLEL */
 
 #ifdef ENABLE_PROVNC_LOGGING
     printf("------- PROVNC VOL FILE Create\n");
@@ -3720,35 +3479,51 @@ H5VL_provenance_file_create(const char *name, unsigned flags, hid_t fcpl_id,
     H5Pget_vol_info(fapl_id, (void **)&info);
 
     /* Copy the FAPL */
-    // under_fapl_id = H5Pcopy(fapl_id);
+    under_fapl_id = H5Pcopy(fapl_id);
 
     /* Set the VOL ID and info for the underlying FAPL */
-    //@xweichu this causes some problems.
-    // H5Pset_vol(under_fapl_id, info->under_vol_id, info->under_vol_info);
- 
+    H5Pset_vol(under_fapl_id, info->under_vol_id, info->under_vol_info);
+
+#ifdef H5_HAVE_PARALLEL
+    // Determine if the file is accessed with the parallel VFD (MPI-IO)
+    // and copy the MPI comm & info objects for our use
+    if((driver_id = H5Pget_driver(under_fapl_id)) > 0 && driver_id == H5FD_MPIO) {
+        // Retrieve the MPI comm & info objects
+        H5Pget_fapl_mpio(under_fapl_id, &mpi_comm, &mpi_info);
+
+        // Indicate that the Comm & Info are available
+        have_mpi_comm_info = true;
+    }
+#endif /* H5_HAVE_PARALLEL */
 
     /* Open the file with the underlying VOL connector */
     m1 = get_time_usec();
-
-
-    //@xweichu
-    // under = H5VLfile_create(name, flags, fcpl_id, under_fapl_id, dxpl_id, req);
-    CLIENT *cl;
-    cl = clnt_create("localhost", HDF5SERVER, HDF5SERVER_V1, "tcp");
-    char* new_name = strdup(name);
-    under = creat_file_1(&new_name, cl);
+    under = H5VLfile_create(name, flags, fcpl_id, under_fapl_id, dxpl_id, req);
     m2 = get_time_usec();
 
     if(under) {
-        printf("I'm here!\n");
-        // if(!PROV_HELPER)
-        //     PROV_HELPER = prov_helper_init(info->prov_file_path, info->prov_level, info->prov_line_format);
+        if(!PROV_HELPER)
+            PROV_HELPER = prov_helper_init(info->prov_file_path, info->prov_level, info->prov_line_format);
 
         file = _file_open_common(under, info->under_vol_id, name);
-        file = malloc(sizeof(H5VL_provenance_t));
-        // file->my_type=
 
+#ifdef H5_HAVE_PARALLEL
+        if(have_mpi_comm_info) {
+            file_prov_info_t *file_info = file->generic_prov_info;
 
+            // Take ownership of MPI Comm & Info
+            file_info->mpi_comm = mpi_comm;
+            file_info->mpi_info = mpi_info;
+            file_info->mpi_comm_info_valid = true;
+
+            // Reset flag, so Comm & Info aren't freed
+            have_mpi_comm_info = false;
+        }
+#endif /* H5_HAVE_PARALLEL */
+
+        /* Check for async request */
+        if(req && *req)
+            *req = H5VL_demo_new_obj(*req, info->under_vol_id, PROV_HELPER);
     } /* end if */
     else
         file = NULL;
@@ -3762,16 +3537,25 @@ H5VL_provenance_file_create(const char *name, unsigned flags, hid_t fcpl_id,
 
     /* Release copy of our VOL info */
     if(info)
-        H5VL_provenance_info_free(info);
+        H5VL_demo_info_free(info);
+
+#ifdef H5_HAVE_PARALLEL
+    // Release MPI Comm & Info, if they weren't taken over
+    if(have_mpi_comm_info) {
+	if(MPI_COMM_NULL != mpi_comm)
+	    MPI_Comm_free(&mpi_comm);
+	if(MPI_INFO_NULL != mpi_info)
+	    MPI_Info_free(&mpi_info);
+    }
+#endif /* H5_HAVE_PARALLEL */
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
-    printf("total overhead:%d",TOTAL_PROV_OVERHEAD);
     return (void *)file;
-} /* end H5VL_provenance_file_create() */
+} /* end H5VL_demo_file_create() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_provenance_file_open
+ * Function:    H5VL_demo_file_open
  *
  * Purpose:     Opens a container created with this connector
  *
@@ -3781,14 +3565,14 @@ H5VL_provenance_file_create(const char *name, unsigned flags, hid_t fcpl_id,
  *-------------------------------------------------------------------------
  */
 static void *
-H5VL_provenance_file_open(const char *name, unsigned flags, hid_t fapl_id,
+H5VL_demo_file_open(const char *name, unsigned flags, hid_t fapl_id,
     hid_t dxpl_id, void **req)
 {
     unsigned long start = get_time_usec();
     unsigned long m1, m2;
 
-    H5VL_provenance_info_t *info = NULL;
-    H5VL_provenance_t *file;
+    H5VL_demo_info_t *info = NULL;
+    H5VL_demo_t *file;
     hid_t under_fapl_id = -1;
     void *under;
 #ifdef H5_HAVE_PARALLEL
@@ -3851,7 +3635,7 @@ H5VL_provenance_file_open(const char *name, unsigned flags, hid_t fapl_id,
 
         /* Check for async request */
         if(req && *req)
-            *req = H5VL_provenance_new_obj(*req, info->under_vol_id, file->prov_helper);
+            *req = H5VL_demo_new_obj(*req, info->under_vol_id, file->prov_helper);
     } /* end if */
     else
         file = NULL;
@@ -3865,7 +3649,7 @@ H5VL_provenance_file_open(const char *name, unsigned flags, hid_t fapl_id,
 
     /* Release copy of our VOL info */
     if(info)
-        H5VL_provenance_info_free(info);
+        H5VL_demo_info_free(info);
 
 #ifdef H5_HAVE_PARALLEL
     // Release MPI Comm & Info, if they weren't taken over
@@ -3879,11 +3663,11 @@ H5VL_provenance_file_open(const char *name, unsigned flags, hid_t fapl_id,
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
     return (void *)file;
-} /* end H5VL_provenance_file_open() */
+} /* end H5VL_demo_file_open() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_provenance_file_get
+ * Function:    H5VL_demo_file_get
  *
  * Purpose:     Get info about a file
  *
@@ -3893,13 +3677,13 @@ H5VL_provenance_file_open(const char *name, unsigned flags, hid_t fapl_id,
  *-------------------------------------------------------------------------
  */
 static herr_t 
-H5VL_provenance_file_get(void *file, H5VL_file_get_t get_type, hid_t dxpl_id,
+H5VL_demo_file_get(void *file, H5VL_file_get_t get_type, hid_t dxpl_id,
     void **req, va_list arguments)
 {
     unsigned long start = get_time_usec();
     unsigned long m1, m2;
 
-    H5VL_provenance_t *o = (H5VL_provenance_t *)file;
+    H5VL_demo_t *o = (H5VL_demo_t *)file;
     herr_t ret_value;
 
 #ifdef ENABLE_PROVNC_LOGGING
@@ -3912,18 +3696,18 @@ H5VL_provenance_file_get(void *file, H5VL_file_get_t get_type, hid_t dxpl_id,
 
     /* Check for async request */
     if(req && *req)
-        *req = H5VL_provenance_new_obj(*req, o->under_vol_id, o->prov_helper);
+        *req = H5VL_demo_new_obj(*req, o->under_vol_id, o->prov_helper);
 
     if(o)
         prov_write(o->prov_helper, __func__, get_time_usec() - start);
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
     return ret_value;
-} /* end H5VL_provenance_file_get() */
+} /* end H5VL_demo_file_get() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_provenance_file_specific_reissue
+ * Function:    H5VL_demo_file_specific_reissue
  *
  * Purpose:     Re-wrap vararg arguments into a va_list and reissue the
  *              file specific callback to the underlying VOL connector.
@@ -3934,7 +3718,7 @@ H5VL_provenance_file_get(void *file, H5VL_file_get_t get_type, hid_t dxpl_id,
  *-------------------------------------------------------------------------
  */
 static herr_t 
-H5VL_provenance_file_specific_reissue(void *obj, hid_t connector_id,
+H5VL_demo_file_specific_reissue(void *obj, hid_t connector_id,
     H5VL_file_specific_t specific_type, hid_t dxpl_id, void **req, ...)
 {
     va_list arguments;
@@ -3945,11 +3729,11 @@ H5VL_provenance_file_specific_reissue(void *obj, hid_t connector_id,
     va_end(arguments);
 
     return ret_value;
-} /* end H5VL_provenance_file_specific_reissue() */
+} /* end H5VL_demo_file_specific_reissue() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_provenance_file_specific
+ * Function:    H5VL_demo_file_specific
  *
  * Purpose:     Specific operation on file
  *
@@ -3959,13 +3743,13 @@ H5VL_provenance_file_specific_reissue(void *obj, hid_t connector_id,
  *-------------------------------------------------------------------------
  */
 static herr_t 
-H5VL_provenance_file_specific(void *file, H5VL_file_specific_t specific_type,
+H5VL_demo_file_specific(void *file, H5VL_file_specific_t specific_type,
     hid_t dxpl_id, void **req, va_list arguments)
 {
     unsigned long start = get_time_usec();
     unsigned long m1, m2;
 
-    H5VL_provenance_t *o = (H5VL_provenance_t *)file;
+    H5VL_demo_t *o = (H5VL_demo_t *)file;
     hid_t under_vol_id = -1;
     herr_t ret_value;
 
@@ -3977,13 +3761,13 @@ H5VL_provenance_file_specific(void *file, H5VL_file_specific_t specific_type,
     if(specific_type == H5VL_FILE_MOUNT) {
         H5I_type_t loc_type;
         const char *name;
-        H5VL_provenance_t *child_file;
+        H5VL_demo_t *child_file;
         hid_t plist_id;
 
         /* Retrieve parameters for 'mount' operation, so we can unwrap the child file */
         loc_type = (H5I_type_t)va_arg(arguments, int); /* enum work-around */
         name = va_arg(arguments, const char *);
-        child_file = (H5VL_provenance_t *)va_arg(arguments, void *);
+        child_file = (H5VL_demo_t *)va_arg(arguments, void *);
         plist_id = va_arg(arguments, hid_t);
 
         /* Keep the correct underlying VOL ID for possible async request token */
@@ -3991,11 +3775,11 @@ H5VL_provenance_file_specific(void *file, H5VL_file_specific_t specific_type,
 
         /* Re-issue 'file specific' call, using the unwrapped pieces */
         m1 = get_time_usec();
-        ret_value = H5VL_provenance_file_specific_reissue(o->under_object, o->under_vol_id, specific_type, dxpl_id, req, (int)loc_type, name, child_file->under_object, plist_id);
+        ret_value = H5VL_demo_file_specific_reissue(o->under_object, o->under_vol_id, specific_type, dxpl_id, req, (int)loc_type, name, child_file->under_object, plist_id);
         m2 = get_time_usec();
     } /* end if */
     else if(specific_type == H5VL_FILE_IS_ACCESSIBLE) {
-        H5VL_provenance_info_t *info;
+        H5VL_demo_info_t *info;
         hid_t fapl_id, under_fapl_id;
         const char *name;
         htri_t *ret;
@@ -4019,14 +3803,14 @@ H5VL_provenance_file_specific(void *file, H5VL_file_specific_t specific_type,
 
         /* Re-issue 'file specific' call */
         m1 = get_time_usec();
-        ret_value = H5VL_provenance_file_specific_reissue(NULL, info->under_vol_id, specific_type, dxpl_id, req, under_fapl_id, name, ret);
+        ret_value = H5VL_demo_file_specific_reissue(NULL, info->under_vol_id, specific_type, dxpl_id, req, under_fapl_id, name, ret);
         m2 = get_time_usec();
 
         /* Close underlying FAPL */
         H5Pclose(under_fapl_id);
 
         /* Release copy of our VOL info */
-        H5VL_provenance_info_free(info);
+        H5VL_demo_info_free(info);
     } /* end else-if */
     else {
         va_list my_arguments;
@@ -4063,18 +3847,18 @@ H5VL_provenance_file_specific(void *file, H5VL_file_specific_t specific_type,
 
     /* Check for async request */
     if(req && *req)
-        *req = H5VL_provenance_new_obj(*req, under_vol_id, o->prov_helper);
+        *req = H5VL_demo_new_obj(*req, under_vol_id, o->prov_helper);
 
     if(o)
         prov_write(o->prov_helper, __func__, get_time_usec() - start);
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
     return ret_value;
-} /* end H5VL_provenance_file_specific() */
+} /* end H5VL_demo_file_specific() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_provenance_file_optional
+ * Function:    H5VL_demo_file_optional
  *
  * Purpose:     Perform a connector-specific operation on a file
  *
@@ -4084,13 +3868,13 @@ H5VL_provenance_file_specific(void *file, H5VL_file_specific_t specific_type,
  *-------------------------------------------------------------------------
  */
 static herr_t 
-H5VL_provenance_file_optional(void *file, hid_t dxpl_id, void **req,
+H5VL_demo_file_optional(void *file, hid_t dxpl_id, void **req,
     va_list arguments)
 {
     unsigned long start = get_time_usec();
     unsigned long m1, m2;
 
-    H5VL_provenance_t *o = (H5VL_provenance_t *)file;
+    H5VL_demo_t *o = (H5VL_demo_t *)file;
     herr_t ret_value;
 
 #ifdef ENABLE_PROVNC_LOGGING
@@ -4103,18 +3887,18 @@ H5VL_provenance_file_optional(void *file, hid_t dxpl_id, void **req,
 
     /* Check for async request */
     if(req && *req)
-        *req = H5VL_provenance_new_obj(*req, o->under_vol_id, o->prov_helper);
+        *req = H5VL_demo_new_obj(*req, o->under_vol_id, o->prov_helper);
 
     if(o)
         prov_write(o->prov_helper, __func__, get_time_usec() - start);
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
     return ret_value;
-} /* end H5VL_provenance_file_optional() */
+} /* end H5VL_demo_file_optional() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_provenance_file_close
+ * Function:    H5VL_demo_file_close
  *
  * Purpose:     Closes a file.
  *
@@ -4124,12 +3908,12 @@ H5VL_provenance_file_optional(void *file, hid_t dxpl_id, void **req,
  *-------------------------------------------------------------------------
  */
 static herr_t 
-H5VL_provenance_file_close(void *file, hid_t dxpl_id, void **req)
+H5VL_demo_file_close(void *file, hid_t dxpl_id, void **req)
 {
     unsigned long start = get_time_usec();
     unsigned long m1, m2;
 
-    H5VL_provenance_t *o = (H5VL_provenance_t *)file;
+    H5VL_demo_t *o = (H5VL_demo_t *)file;
     herr_t ret_value;
 
 #ifdef ENABLE_PROVNC_LOGGING
@@ -4150,22 +3934,22 @@ H5VL_provenance_file_close(void *file, hid_t dxpl_id, void **req)
 
     /* Check for async request */
     if(req && *req)
-        *req = H5VL_provenance_new_obj(*req, o->under_vol_id, o->prov_helper);
+        *req = H5VL_demo_new_obj(*req, o->under_vol_id, o->prov_helper);
 
     /* Release our wrapper, if underlying file was closed */
     if(ret_value >= 0){
         rm_file_node(PROV_HELPER, ((file_prov_info_t*)(o->generic_prov_info))->file_no);
 
-        H5VL_provenance_free_obj(o);
+        H5VL_demo_free_obj(o);
     }
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
     return ret_value;
-} /* end H5VL_provenance_file_close() */
+} /* end H5VL_demo_file_close() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_provenance_group_create
+ * Function:    H5VL_demo_group_create
  *
  * Purpose:     Creates a group inside a container
  *
@@ -4175,15 +3959,15 @@ H5VL_provenance_file_close(void *file, hid_t dxpl_id, void **req)
  *-------------------------------------------------------------------------
  */
 static void *
-H5VL_provenance_group_create(void *obj, const H5VL_loc_params_t *loc_params,
+H5VL_demo_group_create(void *obj, const H5VL_loc_params_t *loc_params,
     const char *name, hid_t lcpl_id, hid_t gcpl_id, hid_t gapl_id, hid_t dxpl_id,
     void **req)
 {
     unsigned long start = get_time_usec();
     unsigned long m1, m2;
 
-    H5VL_provenance_t *group;
-    H5VL_provenance_t *o = (H5VL_provenance_t *)obj;
+    H5VL_demo_t *group;
+    H5VL_demo_t *o = (H5VL_demo_t *)obj;
     void *under;
 
 #ifdef ENABLE_PROVNC_LOGGING
@@ -4204,11 +3988,11 @@ H5VL_provenance_group_create(void *obj, const H5VL_loc_params_t *loc_params,
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
     return (void *)group;
-} /* end H5VL_provenance_group_create() */
+} /* end H5VL_demo_group_create() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_provenance_group_open
+ * Function:    H5VL_demo_group_open
  *
  * Purpose:     Opens a group inside a container
  *
@@ -4218,14 +4002,14 @@ H5VL_provenance_group_create(void *obj, const H5VL_loc_params_t *loc_params,
  *-------------------------------------------------------------------------
  */
 static void *
-H5VL_provenance_group_open(void *obj, const H5VL_loc_params_t *loc_params,
+H5VL_demo_group_open(void *obj, const H5VL_loc_params_t *loc_params,
     const char *name, hid_t gapl_id, hid_t dxpl_id, void **req)
 {
     unsigned long start = get_time_usec();
     unsigned long m1, m2;
 
-    H5VL_provenance_t *group;
-    H5VL_provenance_t *o = (H5VL_provenance_t *)obj;
+    H5VL_demo_t *group;
+    H5VL_demo_t *o = (H5VL_demo_t *)obj;
     void *under;
 
 #ifdef ENABLE_PROVNC_LOGGING
@@ -4246,11 +4030,11 @@ H5VL_provenance_group_open(void *obj, const H5VL_loc_params_t *loc_params,
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
     return (void *)group;
-} /* end H5VL_provenance_group_open() */
+} /* end H5VL_demo_group_open() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_provenance_group_get
+ * Function:    H5VL_demo_group_get
  *
  * Purpose:     Get info about a group
  *
@@ -4260,13 +4044,13 @@ H5VL_provenance_group_open(void *obj, const H5VL_loc_params_t *loc_params,
  *-------------------------------------------------------------------------
  */
 static herr_t 
-H5VL_provenance_group_get(void *obj, H5VL_group_get_t get_type, hid_t dxpl_id,
+H5VL_demo_group_get(void *obj, H5VL_group_get_t get_type, hid_t dxpl_id,
     void **req, va_list arguments)
 {
     unsigned long start = get_time_usec();
     unsigned long m1, m2;
 
-    H5VL_provenance_t *o = (H5VL_provenance_t *)obj;
+    H5VL_demo_t *o = (H5VL_demo_t *)obj;
     herr_t ret_value;
 
 #ifdef ENABLE_PROVNC_LOGGING
@@ -4279,18 +4063,18 @@ H5VL_provenance_group_get(void *obj, H5VL_group_get_t get_type, hid_t dxpl_id,
 
     /* Check for async request */
     if(req && *req)
-        *req = H5VL_provenance_new_obj(*req, o->under_vol_id, o->prov_helper);
+        *req = H5VL_demo_new_obj(*req, o->under_vol_id, o->prov_helper);
 
     if(o)
         prov_write(o->prov_helper, __func__, get_time_usec() - start);
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
     return ret_value;
-} /* end H5VL_provenance_group_get() */
+} /* end H5VL_demo_group_get() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_provenance_group_specific
+ * Function:    H5VL_demo_group_specific
  *
  * Purpose:     Specific operation on a group
  *
@@ -4300,13 +4084,13 @@ H5VL_provenance_group_get(void *obj, H5VL_group_get_t get_type, hid_t dxpl_id,
  *-------------------------------------------------------------------------
  */
 static herr_t 
-H5VL_provenance_group_specific(void *obj, H5VL_group_specific_t specific_type,
+H5VL_demo_group_specific(void *obj, H5VL_group_specific_t specific_type,
     hid_t dxpl_id, void **req, va_list arguments)
 {
     unsigned long start = get_time_usec();
     unsigned long m1, m2;
 
-    H5VL_provenance_t *o = (H5VL_provenance_t *)obj;
+    H5VL_demo_t *o = (H5VL_demo_t *)obj;
     hid_t under_vol_id = -1;
     prov_helper_t *helper = NULL;
     va_list my_arguments;
@@ -4366,17 +4150,17 @@ H5VL_provenance_group_specific(void *obj, H5VL_group_specific_t specific_type,
 
     /* Check for async request */
     if(req && *req)
-        *req = H5VL_provenance_new_obj(*req, under_vol_id, helper);
+        *req = H5VL_demo_new_obj(*req, under_vol_id, helper);
 
     prov_write(helper, __func__, get_time_usec() - start);
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
     return ret_value;
-} /* end H5VL_provenance_group_specific() */
+} /* end H5VL_demo_group_specific() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_provenance_group_optional
+ * Function:    H5VL_demo_group_optional
  *
  * Purpose:     Perform a connector-specific operation on a group
  *
@@ -4386,13 +4170,13 @@ H5VL_provenance_group_specific(void *obj, H5VL_group_specific_t specific_type,
  *-------------------------------------------------------------------------
  */
 static herr_t 
-H5VL_provenance_group_optional(void *obj, hid_t dxpl_id, void **req,
+H5VL_demo_group_optional(void *obj, hid_t dxpl_id, void **req,
     va_list arguments)
 {
     unsigned long start = get_time_usec();
     unsigned long m1, m2;
 
-    H5VL_provenance_t *o = (H5VL_provenance_t *)obj;
+    H5VL_demo_t *o = (H5VL_demo_t *)obj;
     herr_t ret_value;
 
 #ifdef ENABLE_PROVNC_LOGGING
@@ -4405,18 +4189,18 @@ H5VL_provenance_group_optional(void *obj, hid_t dxpl_id, void **req,
 
     /* Check for async request */
     if(req && *req)
-        *req = H5VL_provenance_new_obj(*req, o->under_vol_id, o->prov_helper);
+        *req = H5VL_demo_new_obj(*req, o->under_vol_id, o->prov_helper);
 
     if(o)
         prov_write(o->prov_helper, __func__, get_time_usec() - start);
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
     return ret_value;
-} /* end H5VL_provenance_group_optional() */
+} /* end H5VL_demo_group_optional() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_provenance_group_close
+ * Function:    H5VL_demo_group_close
  *
  * Purpose:     Closes a group.
  *
@@ -4426,12 +4210,12 @@ H5VL_provenance_group_optional(void *obj, hid_t dxpl_id, void **req,
  *-------------------------------------------------------------------------
  */
 static herr_t 
-H5VL_provenance_group_close(void *grp, hid_t dxpl_id, void **req)
+H5VL_demo_group_close(void *grp, hid_t dxpl_id, void **req)
 {
     unsigned long start = get_time_usec();
     unsigned long m1, m2;
 
-    H5VL_provenance_t *o = (H5VL_provenance_t *)grp;
+    H5VL_demo_t *o = (H5VL_demo_t *)grp;
     herr_t ret_value;
 
 #ifdef ENABLE_PROVNC_LOGGING
@@ -4444,7 +4228,7 @@ H5VL_provenance_group_close(void *grp, hid_t dxpl_id, void **req)
 
     /* Check for async request */
     if(req && *req)
-        *req = H5VL_provenance_new_obj(*req, o->under_vol_id, o->prov_helper);
+        *req = H5VL_demo_new_obj(*req, o->under_vol_id, o->prov_helper);
 
     /* Release our wrapper, if underlying group was closed */
     if(ret_value >= 0){
@@ -4457,16 +4241,16 @@ H5VL_provenance_group_close(void *grp, hid_t dxpl_id, void **req)
 
         rm_grp_node(o->prov_helper, grp_info);
 
-        H5VL_provenance_free_obj(o);
+        H5VL_demo_free_obj(o);
     }
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
     return ret_value;
-} /* end H5VL_provenance_group_close() */
+} /* end H5VL_demo_group_close() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_provenance_link_create_reissue
+ * Function:    H5VL_demo_link_create_reissue
  *
  * Purpose:     Re-wrap vararg arguments into a va_list and reissue the
  *              link create callback to the underlying VOL connector.
@@ -4477,7 +4261,7 @@ H5VL_provenance_group_close(void *grp, hid_t dxpl_id, void **req)
  *-------------------------------------------------------------------------
  */
 static herr_t 
-H5VL_provenance_link_create_reissue(H5VL_link_create_type_t create_type,
+H5VL_demo_link_create_reissue(H5VL_link_create_type_t create_type,
     void *obj, const H5VL_loc_params_t *loc_params, hid_t connector_id,
     hid_t lcpl_id, hid_t lapl_id, hid_t dxpl_id, void **req, ...)
 {
@@ -4489,11 +4273,11 @@ H5VL_provenance_link_create_reissue(H5VL_link_create_type_t create_type,
     va_end(arguments);
 
     return ret_value;
-} /* end H5VL_provenance_link_create_reissue() */
+} /* end H5VL_demo_link_create_reissue() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_provenance_link_create
+ * Function:    H5VL_demo_link_create
  *
  * Purpose:     Creates a hard / soft / UD / external link.
  *
@@ -4503,14 +4287,14 @@ H5VL_provenance_link_create_reissue(H5VL_link_create_type_t create_type,
  *-------------------------------------------------------------------------
  */
 static herr_t 
-H5VL_provenance_link_create(H5VL_link_create_type_t create_type, void *obj,
+H5VL_demo_link_create(H5VL_link_create_type_t create_type, void *obj,
     const H5VL_loc_params_t *loc_params, hid_t lcpl_id, hid_t lapl_id,
     hid_t dxpl_id, void **req, va_list arguments)
 {
     unsigned long start = get_time_usec();
     unsigned long m1, m2;
 
-    H5VL_provenance_t *o = (H5VL_provenance_t *)obj;
+    H5VL_demo_t *o = (H5VL_demo_t *)obj;
     hid_t under_vol_id = -1;
     herr_t ret_value;
 
@@ -4535,15 +4319,15 @@ H5VL_provenance_link_create(H5VL_link_create_type_t create_type, void *obj,
         if(cur_obj) {
             /* Check if we still need the "under" VOL ID */
             if(under_vol_id < 0)
-                under_vol_id = ((H5VL_provenance_t *)cur_obj)->under_vol_id;
+                under_vol_id = ((H5VL_demo_t *)cur_obj)->under_vol_id;
 
             /* Set the object for the link target */
-            cur_obj = ((H5VL_provenance_t *)cur_obj)->under_object;
+            cur_obj = ((H5VL_demo_t *)cur_obj)->under_object;
         } /* end if */
 
         /* Re-issue 'link create' call, using the unwrapped pieces */
         m1 = get_time_usec();
-        ret_value = H5VL_provenance_link_create_reissue(create_type, (o ? o->under_object : NULL), loc_params, under_vol_id, lcpl_id, lapl_id, dxpl_id, req, cur_obj, cur_params);
+        ret_value = H5VL_demo_link_create_reissue(create_type, (o ? o->under_object : NULL), loc_params, under_vol_id, lcpl_id, lapl_id, dxpl_id, req, cur_obj, cur_params);
         m2 = get_time_usec();
     } /* end if */
     else {
@@ -4554,18 +4338,18 @@ H5VL_provenance_link_create(H5VL_link_create_type_t create_type, void *obj,
 
     /* Check for async request */
     if(req && *req)
-        *req = H5VL_provenance_new_obj(*req, under_vol_id, o->prov_helper);
+        *req = H5VL_demo_new_obj(*req, under_vol_id, o->prov_helper);
 
     if(o)
         prov_write(o->prov_helper, __func__, get_time_usec() - start);
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
     return ret_value;
-} /* end H5VL_provenance_link_create() */
+} /* end H5VL_demo_link_create() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_provenance_link_copy
+ * Function:    H5VL_demo_link_copy
  *
  * Purpose:     Renames an object within an HDF5 container and copies it to a new
  *              group.  The original name SRC is unlinked from the group graph
@@ -4580,15 +4364,15 @@ H5VL_provenance_link_create(H5VL_link_create_type_t create_type, void *obj,
  *-------------------------------------------------------------------------
  */
 static herr_t 
-H5VL_provenance_link_copy(void *src_obj, const H5VL_loc_params_t *loc_params1,
+H5VL_demo_link_copy(void *src_obj, const H5VL_loc_params_t *loc_params1,
     void *dst_obj, const H5VL_loc_params_t *loc_params2, hid_t lcpl_id,
     hid_t lapl_id, hid_t dxpl_id, void **req)
 {
     unsigned long start = get_time_usec();
     unsigned long m1, m2;
 
-    H5VL_provenance_t *o_src = (H5VL_provenance_t *)src_obj;
-    H5VL_provenance_t *o_dst = (H5VL_provenance_t *)dst_obj;
+    H5VL_demo_t *o_src = (H5VL_demo_t *)src_obj;
+    H5VL_demo_t *o_dst = (H5VL_demo_t *)dst_obj;
     hid_t under_vol_id = -1;
     herr_t ret_value;
 
@@ -4609,18 +4393,18 @@ H5VL_provenance_link_copy(void *src_obj, const H5VL_loc_params_t *loc_params1,
 
     /* Check for async request */
     if(req && *req)
-        *req = H5VL_provenance_new_obj(*req, under_vol_id, o_dst->prov_helper);
+        *req = H5VL_demo_new_obj(*req, under_vol_id, o_dst->prov_helper);
             
     if(o_dst)
         prov_write(o_dst->prov_helper, __func__, get_time_usec() - start);
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
     return ret_value;
-} /* end H5VL_provenance_link_copy() */
+} /* end H5VL_demo_link_copy() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_provenance_link_move
+ * Function:    H5VL_demo_link_move
  *
  * Purpose:     Moves a link within an HDF5 file to a new group.  The original
  *              name SRC is unlinked from the group graph
@@ -4635,15 +4419,15 @@ H5VL_provenance_link_copy(void *src_obj, const H5VL_loc_params_t *loc_params1,
  *-------------------------------------------------------------------------
  */
 static herr_t 
-H5VL_provenance_link_move(void *src_obj, const H5VL_loc_params_t *loc_params1,
+H5VL_demo_link_move(void *src_obj, const H5VL_loc_params_t *loc_params1,
     void *dst_obj, const H5VL_loc_params_t *loc_params2, hid_t lcpl_id,
     hid_t lapl_id, hid_t dxpl_id, void **req)
 {
     unsigned long start = get_time_usec();
     unsigned long m1, m2;
 
-    H5VL_provenance_t *o_src = (H5VL_provenance_t *)src_obj;
-    H5VL_provenance_t *o_dst = (H5VL_provenance_t *)dst_obj;
+    H5VL_demo_t *o_src = (H5VL_demo_t *)src_obj;
+    H5VL_demo_t *o_dst = (H5VL_demo_t *)dst_obj;
     hid_t under_vol_id = -1;
     herr_t ret_value;
 
@@ -4664,18 +4448,18 @@ H5VL_provenance_link_move(void *src_obj, const H5VL_loc_params_t *loc_params1,
 
     /* Check for async request */
     if(req && *req)
-        *req = H5VL_provenance_new_obj(*req, under_vol_id, o_dst->prov_helper);
+        *req = H5VL_demo_new_obj(*req, under_vol_id, o_dst->prov_helper);
 
     if(o_dst)
         prov_write(o_dst->prov_helper, __func__, get_time_usec() - start);
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
     return ret_value;
-} /* end H5VL_provenance_link_move() */
+} /* end H5VL_demo_link_move() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_provenance_link_get
+ * Function:    H5VL_demo_link_get
  *
  * Purpose:     Get info about a link
  *
@@ -4685,13 +4469,13 @@ H5VL_provenance_link_move(void *src_obj, const H5VL_loc_params_t *loc_params1,
  *-------------------------------------------------------------------------
  */
 static herr_t 
-H5VL_provenance_link_get(void *obj, const H5VL_loc_params_t *loc_params,
+H5VL_demo_link_get(void *obj, const H5VL_loc_params_t *loc_params,
     H5VL_link_get_t get_type, hid_t dxpl_id, void **req, va_list arguments)
 {
     unsigned long start = get_time_usec();
     unsigned long m1, m2;
 
-    H5VL_provenance_t *o = (H5VL_provenance_t *)obj;
+    H5VL_demo_t *o = (H5VL_demo_t *)obj;
     herr_t ret_value;
 
 #ifdef ENABLE_PROVNC_LOGGING
@@ -4704,18 +4488,18 @@ H5VL_provenance_link_get(void *obj, const H5VL_loc_params_t *loc_params,
 
     /* Check for async request */
     if(req && *req)
-        *req = H5VL_provenance_new_obj(*req, o->under_vol_id, o->prov_helper);
+        *req = H5VL_demo_new_obj(*req, o->under_vol_id, o->prov_helper);
             
     if(o)
         prov_write(o->prov_helper, __func__, get_time_usec() - start);
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
     return ret_value;
-} /* end H5VL_provenance_link_get() */
+} /* end H5VL_demo_link_get() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_provenance_link_specific
+ * Function:    H5VL_demo_link_specific
  *
  * Purpose:     Specific operation on a link
  *
@@ -4725,13 +4509,13 @@ H5VL_provenance_link_get(void *obj, const H5VL_loc_params_t *loc_params,
  *-------------------------------------------------------------------------
  */
 static herr_t 
-H5VL_provenance_link_specific(void *obj, const H5VL_loc_params_t *loc_params,
+H5VL_demo_link_specific(void *obj, const H5VL_loc_params_t *loc_params,
     H5VL_link_specific_t specific_type, hid_t dxpl_id, void **req, va_list arguments)
 {
     unsigned long start = get_time_usec();
     unsigned long m1, m2;
 
-    H5VL_provenance_t *o = (H5VL_provenance_t *)obj;
+    H5VL_demo_t *o = (H5VL_demo_t *)obj;
     herr_t ret_value;
 
 #ifdef ENABLE_PROVNC_LOGGING
@@ -4744,18 +4528,18 @@ H5VL_provenance_link_specific(void *obj, const H5VL_loc_params_t *loc_params,
 
     /* Check for async request */
     if(req && *req)
-        *req = H5VL_provenance_new_obj(*req, o->under_vol_id, o->prov_helper);
+        *req = H5VL_demo_new_obj(*req, o->under_vol_id, o->prov_helper);
 
     if(o)
         prov_write(o->prov_helper, __func__, get_time_usec() - start);
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
     return ret_value;
-} /* end H5VL_provenance_link_specific() */
+} /* end H5VL_demo_link_specific() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_provenance_link_optional
+ * Function:    H5VL_demo_link_optional
  *
  * Purpose:     Perform a connector-specific operation on a link
  *
@@ -4765,13 +4549,13 @@ H5VL_provenance_link_specific(void *obj, const H5VL_loc_params_t *loc_params,
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5VL_provenance_link_optional(void *obj, hid_t dxpl_id, void **req,
+H5VL_demo_link_optional(void *obj, hid_t dxpl_id, void **req,
     va_list arguments)
 {
     unsigned long start = get_time_usec();
     unsigned long m1, m2;
 
-    H5VL_provenance_t *o = (H5VL_provenance_t *)obj;
+    H5VL_demo_t *o = (H5VL_demo_t *)obj;
     herr_t ret_value;
 
 #ifdef ENABLE_PROVNC_LOGGING
@@ -4784,18 +4568,18 @@ H5VL_provenance_link_optional(void *obj, hid_t dxpl_id, void **req,
 
     /* Check for async request */
     if(req && *req)
-        *req = H5VL_provenance_new_obj(*req, o->under_vol_id, o->prov_helper);
+        *req = H5VL_demo_new_obj(*req, o->under_vol_id, o->prov_helper);
 
     if(o)
         prov_write(o->prov_helper, __func__, get_time_usec() - start);
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
     return ret_value;
-} /* end H5VL_provenance_link_optional() */
+} /* end H5VL_demo_link_optional() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_provenance_object_open
+ * Function:    H5VL_demo_object_open
  *
  * Purpose:     Opens an object inside a container.
  *
@@ -4805,14 +4589,14 @@ H5VL_provenance_link_optional(void *obj, hid_t dxpl_id, void **req,
  *-------------------------------------------------------------------------
  */
 static void *
-H5VL_provenance_object_open(void *obj, const H5VL_loc_params_t *loc_params,
+H5VL_demo_object_open(void *obj, const H5VL_loc_params_t *loc_params,
     H5I_type_t *obj_to_open_type, hid_t dxpl_id, void **req)
 {
     unsigned long start = get_time_usec();
     unsigned long m1, m2;
 
-    H5VL_provenance_t *new_obj;
-    H5VL_provenance_t *o = (H5VL_provenance_t *)obj;
+    H5VL_demo_t *new_obj;
+    H5VL_demo_t *o = (H5VL_demo_t *)obj;
     void *under;
 
 #ifdef ENABLE_PROVNC_LOGGING
@@ -4840,11 +4624,11 @@ H5VL_provenance_object_open(void *obj, const H5VL_loc_params_t *loc_params,
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
     return (void *)new_obj;
-} /* end H5VL_provenance_object_open() */
+} /* end H5VL_demo_object_open() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_provenance_object_copy
+ * Function:    H5VL_demo_object_copy
  *
  * Purpose:     Copies an object inside a container.
  *
@@ -4854,7 +4638,7 @@ H5VL_provenance_object_open(void *obj, const H5VL_loc_params_t *loc_params,
  *-------------------------------------------------------------------------
  */
 static herr_t 
-H5VL_provenance_object_copy(void *src_obj, const H5VL_loc_params_t *src_loc_params,
+H5VL_demo_object_copy(void *src_obj, const H5VL_loc_params_t *src_loc_params,
     const char *src_name, void *dst_obj, const H5VL_loc_params_t *dst_loc_params,
     const char *dst_name, hid_t ocpypl_id, hid_t lcpl_id, hid_t dxpl_id,
     void **req)
@@ -4862,8 +4646,8 @@ H5VL_provenance_object_copy(void *src_obj, const H5VL_loc_params_t *src_loc_para
     unsigned long start = get_time_usec();
     unsigned long m1, m2;
 
-    H5VL_provenance_t *o_src = (H5VL_provenance_t *)src_obj;
-    H5VL_provenance_t *o_dst = (H5VL_provenance_t *)dst_obj;
+    H5VL_demo_t *o_src = (H5VL_demo_t *)src_obj;
+    H5VL_demo_t *o_dst = (H5VL_demo_t *)dst_obj;
     herr_t ret_value;
 
 #ifdef ENABLE_PROVNC_LOGGING
@@ -4876,18 +4660,18 @@ H5VL_provenance_object_copy(void *src_obj, const H5VL_loc_params_t *src_loc_para
 
     /* Check for async request */
     if(req && *req)
-        *req = H5VL_provenance_new_obj(*req, o_src->under_vol_id, o_dst->prov_helper);
+        *req = H5VL_demo_new_obj(*req, o_src->under_vol_id, o_dst->prov_helper);
 
     if(o_dst)
         prov_write(o_dst->prov_helper, __func__, get_time_usec() - start);
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
     return ret_value;
-} /* end H5VL_provenance_object_copy() */
+} /* end H5VL_demo_object_copy() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_provenance_object_get
+ * Function:    H5VL_demo_object_get
  *
  * Purpose:     Get info about an object
  *
@@ -4897,12 +4681,12 @@ H5VL_provenance_object_copy(void *src_obj, const H5VL_loc_params_t *src_loc_para
  *-------------------------------------------------------------------------
  */
 static herr_t 
-H5VL_provenance_object_get(void *obj, const H5VL_loc_params_t *loc_params, H5VL_object_get_t get_type, hid_t dxpl_id, void **req, va_list arguments)
+H5VL_demo_object_get(void *obj, const H5VL_loc_params_t *loc_params, H5VL_object_get_t get_type, hid_t dxpl_id, void **req, va_list arguments)
 {
     unsigned long start = get_time_usec();
     unsigned long m1, m2;
 
-    H5VL_provenance_t *o = (H5VL_provenance_t *)obj;
+    H5VL_demo_t *o = (H5VL_demo_t *)obj;
     herr_t ret_value;
 
 #ifdef ENABLE_PROVNC_LOGGING
@@ -4915,18 +4699,18 @@ H5VL_provenance_object_get(void *obj, const H5VL_loc_params_t *loc_params, H5VL_
 
     /* Check for async request */
     if(req && *req)
-        *req = H5VL_provenance_new_obj(*req, o->under_vol_id, o->prov_helper);
+        *req = H5VL_demo_new_obj(*req, o->under_vol_id, o->prov_helper);
 
     if(o)
         prov_write(o->prov_helper, __func__, get_time_usec() - start);
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
     return ret_value;
-} /* end H5VL_provenance_object_get() */
+} /* end H5VL_demo_object_get() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_provenance_object_specific
+ * Function:    H5VL_demo_object_specific
  *
  * Purpose:     Specific operation on an object
  *
@@ -4936,14 +4720,14 @@ H5VL_provenance_object_get(void *obj, const H5VL_loc_params_t *loc_params, H5VL_
  *-------------------------------------------------------------------------
  */
 static herr_t 
-H5VL_provenance_object_specific(void *obj, const H5VL_loc_params_t *loc_params,
+H5VL_demo_object_specific(void *obj, const H5VL_loc_params_t *loc_params,
     H5VL_object_specific_t specific_type, hid_t dxpl_id, void **req,
     va_list arguments)
 {
     unsigned long start = get_time_usec();
     unsigned long m1, m2;
 
-    H5VL_provenance_t *o = (H5VL_provenance_t *)obj;
+    H5VL_demo_t *o = (H5VL_demo_t *)obj;
     hid_t under_vol_id = -1;
     prov_helper_t *helper = NULL;
     va_list my_arguments;
@@ -5030,17 +4814,17 @@ H5VL_provenance_object_specific(void *obj, const H5VL_loc_params_t *loc_params,
 
     /* Check for async request */
     if(req && *req)
-        *req = H5VL_provenance_new_obj(*req, under_vol_id, helper);
+        *req = H5VL_demo_new_obj(*req, under_vol_id, helper);
 
     prov_write(helper, __func__, get_time_usec() - start);
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
     return ret_value;
-} /* end H5VL_provenance_object_specific() */
+} /* end H5VL_demo_object_specific() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_provenance_object_optional
+ * Function:    H5VL_demo_object_optional
  *
  * Purpose:     Perform a connector-specific operation for an object
  *
@@ -5050,13 +4834,13 @@ H5VL_provenance_object_specific(void *obj, const H5VL_loc_params_t *loc_params,
  *-------------------------------------------------------------------------
  */
 static herr_t 
-H5VL_provenance_object_optional(void *obj, hid_t dxpl_id, void **req,
+H5VL_demo_object_optional(void *obj, hid_t dxpl_id, void **req,
     va_list arguments)
 {
     unsigned long start = get_time_usec();
     unsigned long m1, m2;
 
-    H5VL_provenance_t *o = (H5VL_provenance_t *)obj;
+    H5VL_demo_t *o = (H5VL_demo_t *)obj;
     herr_t ret_value;
 
 #ifdef ENABLE_PROVNC_LOGGING
@@ -5069,18 +4853,18 @@ H5VL_provenance_object_optional(void *obj, hid_t dxpl_id, void **req,
 
     /* Check for async request */
     if(req && *req)
-        *req = H5VL_provenance_new_obj(*req, o->under_vol_id, o->prov_helper);
+        *req = H5VL_demo_new_obj(*req, o->under_vol_id, o->prov_helper);
 
     if(o)
         prov_write(o->prov_helper, __func__, get_time_usec() - start);
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
     return ret_value;
-} /* end H5VL_provenance_object_optional() */
+} /* end H5VL_demo_object_optional() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_provenance_request_wait
+ * Function:    H5VL_demo_request_wait
  *
  * Purpose:     Wait (with a timeout) for an async operation to complete
  *
@@ -5093,13 +4877,13 @@ H5VL_provenance_object_optional(void *obj, hid_t dxpl_id, void **req,
  *-------------------------------------------------------------------------
  */
 static herr_t 
-H5VL_provenance_request_wait(void *obj, uint64_t timeout,
+H5VL_demo_request_wait(void *obj, uint64_t timeout,
     H5ES_status_t *status)
 {
     unsigned long start = get_time_usec();
     unsigned long m1, m2;
 
-    H5VL_provenance_t *o = (H5VL_provenance_t *)obj;
+    H5VL_demo_t *o = (H5VL_demo_t *)obj;
     herr_t ret_value;
 
 #ifdef ENABLE_PROVNC_LOGGING
@@ -5114,15 +4898,15 @@ H5VL_provenance_request_wait(void *obj, uint64_t timeout,
         prov_write(o->prov_helper, __func__, get_time_usec() - start);
 
     if(ret_value >= 0 && *status != H5ES_STATUS_IN_PROGRESS)
-        H5VL_provenance_free_obj(o);
+        H5VL_demo_free_obj(o);
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
     return ret_value;
-} /* end H5VL_provenance_request_wait() */
+} /* end H5VL_demo_request_wait() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_provenance_request_notify
+ * Function:    H5VL_demo_request_notify
  *
  * Purpose:     Registers a user callback to be invoked when an asynchronous
  *              operation completes
@@ -5135,12 +4919,12 @@ H5VL_provenance_request_wait(void *obj, uint64_t timeout,
  *-------------------------------------------------------------------------
  */
 static herr_t 
-H5VL_provenance_request_notify(void *obj, H5VL_request_notify_t cb, void *ctx)
+H5VL_demo_request_notify(void *obj, H5VL_request_notify_t cb, void *ctx)
 {
     unsigned long start = get_time_usec();
     unsigned long m1, m2;
 
-    H5VL_provenance_t *o = (H5VL_provenance_t *)obj;
+    H5VL_demo_t *o = (H5VL_demo_t *)obj;
     herr_t ret_value;
 
 #ifdef ENABLE_PROVNC_LOGGING
@@ -5155,15 +4939,15 @@ H5VL_provenance_request_notify(void *obj, H5VL_request_notify_t cb, void *ctx)
         prov_write(o->prov_helper, __func__, get_time_usec() - start);
 
     if(ret_value >= 0)
-        H5VL_provenance_free_obj(o);
+        H5VL_demo_free_obj(o);
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
     return ret_value;
-} /* end H5VL_provenance_request_notify() */
+} /* end H5VL_demo_request_notify() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_provenance_request_cancel
+ * Function:    H5VL_demo_request_cancel
  *
  * Purpose:     Cancels an asynchronous operation
  *
@@ -5175,12 +4959,12 @@ H5VL_provenance_request_notify(void *obj, H5VL_request_notify_t cb, void *ctx)
  *-------------------------------------------------------------------------
  */
 static herr_t 
-H5VL_provenance_request_cancel(void *obj)
+H5VL_demo_request_cancel(void *obj)
 {
     unsigned long start = get_time_usec();
     unsigned long m1, m2;
 
-    H5VL_provenance_t *o = (H5VL_provenance_t *)obj;
+    H5VL_demo_t *o = (H5VL_demo_t *)obj;
     herr_t ret_value;
 
 #ifdef ENABLE_PROVNC_LOGGING
@@ -5195,15 +4979,15 @@ H5VL_provenance_request_cancel(void *obj)
         prov_write(o->prov_helper, __func__, get_time_usec() - start);
 
     if(ret_value >= 0)
-        H5VL_provenance_free_obj(o);
+        H5VL_demo_free_obj(o);
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
     return ret_value;
-} /* end H5VL_provenance_request_cancel() */
+} /* end H5VL_demo_request_cancel() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_provenance_request_specific_reissue
+ * Function:    H5VL_demo_request_specific_reissue
  *
  * Purpose:     Re-wrap vararg arguments into a va_list and reissue the
  *              request specific callback to the underlying VOL connector.
@@ -5214,7 +4998,7 @@ H5VL_provenance_request_cancel(void *obj)
  *-------------------------------------------------------------------------
  */
 static herr_t 
-H5VL_provenance_request_specific_reissue(void *obj, hid_t connector_id,
+H5VL_demo_request_specific_reissue(void *obj, hid_t connector_id,
     H5VL_request_specific_t specific_type, ...)
 {
     va_list arguments;
@@ -5225,11 +5009,11 @@ H5VL_provenance_request_specific_reissue(void *obj, hid_t connector_id,
     va_end(arguments);
 
     return ret_value;
-} /* end H5VL_provenance_request_specific_reissue() */
+} /* end H5VL_demo_request_specific_reissue() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_provenance_request_specific
+ * Function:    H5VL_demo_request_specific
  *
  * Purpose:     Specific operation on a request
  *
@@ -5239,7 +5023,7 @@ H5VL_provenance_request_specific_reissue(void *obj, hid_t connector_id,
  *-------------------------------------------------------------------------
  */
 static herr_t 
-H5VL_provenance_request_specific(void *obj, H5VL_request_specific_t specific_type,
+H5VL_demo_request_specific(void *obj, H5VL_request_specific_t specific_type,
     va_list arguments)
 {
 
@@ -5267,19 +5051,19 @@ H5VL_provenance_request_specific(void *obj, H5VL_request_specific_t specific_typ
             void **req_array;
             void **under_req_array;
             uint64_t timeout;
-            H5VL_provenance_t *o;
+            H5VL_demo_t *o;
             size_t u;               /* Local index variable */
 
             /* Get the request array */
             req_array = va_arg(tmp_arguments, void **);
 
             /* Get a request to use for determining the underlying VOL connector */
-            o = (H5VL_provenance_t *)req_array[0];
+            o = (H5VL_demo_t *)req_array[0];
 
             /* Create array of underlying VOL requests */
             under_req_array = (void **)malloc(req_count * sizeof(void **));
             for(u = 0; u < req_count; u++)
-                under_req_array[u] = ((H5VL_provenance_t *)req_array[u])->under_object;
+                under_req_array[u] = ((H5VL_demo_t *)req_array[u])->under_object;
 
             /* Remove the timeout value from the vararg list (it's used in all the calls below) */
             timeout = va_arg(tmp_arguments, uint64_t);
@@ -5295,14 +5079,14 @@ H5VL_provenance_request_specific(void *obj, H5VL_request_specific_t specific_typ
                 status = va_arg(tmp_arguments, H5ES_status_t *);
 
                 /* Reissue the WAITANY 'request specific' call */
-                ret_value = H5VL_provenance_request_specific_reissue(o->under_object, o->under_vol_id, specific_type, req_count, under_req_array, timeout, index, status);
+                ret_value = H5VL_demo_request_specific_reissue(o->under_object, o->under_vol_id, specific_type, req_count, under_req_array, timeout, index, status);
 
                 /* Release the completed request, if it completed */
                 if(ret_value >= 0 && *status != H5ES_STATUS_IN_PROGRESS) {
-                    H5VL_provenance_t *tmp_o;
+                    H5VL_demo_t *tmp_o;
 
-                    tmp_o = (H5VL_provenance_t *)req_array[*index];
-                    H5VL_provenance_free_obj(tmp_o);
+                    tmp_o = (H5VL_demo_t *)req_array[*index];
+                    H5VL_demo_free_obj(tmp_o);
                 } /* end if */
             } /* end if */
             else if(H5VL_REQUEST_WAITSOME == specific_type) {
@@ -5317,7 +5101,7 @@ H5VL_provenance_request_specific(void *obj, H5VL_request_specific_t specific_typ
                 array_of_statuses = va_arg(tmp_arguments, H5ES_status_t *);
 
                 /* Reissue the WAITSOME 'request specific' call */
-                ret_value = H5VL_provenance_request_specific_reissue(o->under_object, o->under_vol_id, specific_type, req_count, under_req_array, timeout, outcount, array_of_indices, array_of_statuses);
+                ret_value = H5VL_demo_request_specific_reissue(o->under_object, o->under_vol_id, specific_type, req_count, under_req_array, timeout, outcount, array_of_indices, array_of_statuses);
 
                 /* If any requests completed, release them */
                 if(ret_value >= 0 && *outcount > 0) {
@@ -5328,10 +5112,10 @@ H5VL_provenance_request_specific(void *obj, H5VL_request_specific_t specific_typ
 
                     /* Release the completed requests */
                     for(u = 0; u < *outcount; u++) {
-                        H5VL_provenance_t *tmp_o;
+                        H5VL_demo_t *tmp_o;
 
-                        tmp_o = (H5VL_provenance_t *)req_array[idx_array[u]];
-                        H5VL_provenance_free_obj(tmp_o);
+                        tmp_o = (H5VL_demo_t *)req_array[idx_array[u]];
+                        H5VL_demo_free_obj(tmp_o);
                     } /* end for */
                 } /* end if */
             } /* end else-if */
@@ -5342,16 +5126,16 @@ H5VL_provenance_request_specific(void *obj, H5VL_request_specific_t specific_typ
                 array_of_statuses = va_arg(tmp_arguments, H5ES_status_t *);
 
                 /* Reissue the WAITALL 'request specific' call */
-                ret_value = H5VL_provenance_request_specific_reissue(o->under_object, o->under_vol_id, specific_type, req_count, under_req_array, timeout, array_of_statuses);
+                ret_value = H5VL_demo_request_specific_reissue(o->under_object, o->under_vol_id, specific_type, req_count, under_req_array, timeout, array_of_statuses);
 
                 /* Release the completed requests */
                 if(ret_value >= 0) {
                     for(u = 0; u < req_count; u++) {
                         if(array_of_statuses[u] != H5ES_STATUS_IN_PROGRESS) {
-                            H5VL_provenance_t *tmp_o;
+                            H5VL_demo_t *tmp_o;
 
-                            tmp_o = (H5VL_provenance_t *)req_array[u];
-                            H5VL_provenance_free_obj(tmp_o);
+                            tmp_o = (H5VL_demo_t *)req_array[u];
+                            H5VL_demo_free_obj(tmp_o);
                         } /* end if */
                     } /* end for */
                 } /* end if */
@@ -5368,11 +5152,11 @@ H5VL_provenance_request_specific(void *obj, H5VL_request_specific_t specific_typ
         assert(0 && "Unknown 'specific' operation");
 
     return ret_value;
-} /* end H5VL_provenance_request_specific() */
+} /* end H5VL_demo_request_specific() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_provenance_request_optional
+ * Function:    H5VL_demo_request_optional
  *
  * Purpose:     Perform a connector-specific operation for a request
  *
@@ -5382,12 +5166,12 @@ H5VL_provenance_request_specific(void *obj, H5VL_request_specific_t specific_typ
  *-------------------------------------------------------------------------
  */
 static herr_t 
-H5VL_provenance_request_optional(void *obj, va_list arguments)
+H5VL_demo_request_optional(void *obj, va_list arguments)
 {
     unsigned long start = get_time_usec();
     unsigned long m1, m2;
 
-    H5VL_provenance_t *o = (H5VL_provenance_t *)obj;
+    H5VL_demo_t *o = (H5VL_demo_t *)obj;
     herr_t ret_value;
 
 #ifdef ENABLE_PROVNC_LOGGING
@@ -5403,11 +5187,11 @@ H5VL_provenance_request_optional(void *obj, va_list arguments)
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
     return ret_value;
-} /* end H5VL_provenance_request_optional() */
+} /* end H5VL_demo_request_optional() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5VL_provenance_request_free
+ * Function:    H5VL_demo_request_free
  *
  * Purpose:     Releases a request, allowing the operation to complete without
  *              application tracking
@@ -5418,12 +5202,12 @@ H5VL_provenance_request_optional(void *obj, va_list arguments)
  *-------------------------------------------------------------------------
  */
 static herr_t 
-H5VL_provenance_request_free(void *obj)
+H5VL_demo_request_free(void *obj)
 {
     unsigned long start = get_time_usec();
     unsigned long m1, m2;
 
-    H5VL_provenance_t *o = (H5VL_provenance_t *)obj;
+    H5VL_demo_t *o = (H5VL_demo_t *)obj;
     herr_t ret_value;
 
 #ifdef ENABLE_PROVNC_LOGGING
@@ -5438,9 +5222,9 @@ H5VL_provenance_request_free(void *obj)
         prov_write(o->prov_helper, __func__, get_time_usec() - start);
 
     if(ret_value >= 0)
-        H5VL_provenance_free_obj(o);
+        H5VL_demo_free_obj(o);
 
     TOTAL_PROV_OVERHEAD += (get_time_usec() - start - (m2 - m1));
     return ret_value;
-} /* end H5VL_provenance_request_free() */
+} /* end H5VL_demo_request_free() */
 
