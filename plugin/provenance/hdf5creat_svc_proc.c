@@ -53,8 +53,7 @@ dataset * read_dataset_1_svc(list * lst, struct svc_req * req){
 	res.data.data_len = 5;
 	
 	res.data.data_val = (int*)malloc(5*sizeof(int));
-	printf("len:%d,\n",res.data.data_len);
-	// return (&res);
+
 	
 	int * buf = (int*)malloc(5*sizeof(int));
 	
@@ -68,16 +67,10 @@ dataset * read_dataset_1_svc(list * lst, struct svc_req * req){
 		res.data.data_val[i] = buf[i];
 	}
 
-	// res.data[0] = 99;
-
-	// printf("data:");
-    // for(int i =0; i<5; i++){
-    //     printf("%d,",res.data[i]);
-    // }
-   	// printf("pointer:%p\n",res);
+	res.data.data_val[0] = 99;
+	res.data.data_val[4] = 88;
 	
-    // H5Dclose(dataset_id);
-	// H5Fclose(file_id);
+	printf("len:%d,\n",res.data.data_len);
 
 	return (&res);
 }
