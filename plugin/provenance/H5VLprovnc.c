@@ -3740,25 +3740,12 @@ H5VL_provenance_file_create(const char *name, unsigned flags, hid_t fcpl_id,
     m2 = get_time_usec();
 
     if(under) {
-        printf("I'm here!\n");
-        // if(!PROV_HELPER)
-        //     PROV_HELPER = prov_helper_init(info->prov_file_path, info->prov_level, info->prov_line_format);
-
-        file = _file_open_common(under, info->under_vol_id, name);
         file = malloc(sizeof(H5VL_provenance_t));
-        // file->my_type=
-
-
+        file->my_type= H5E_FILE;
+        file->name = name;
     } /* end if */
     else
         file = NULL;
-
-    if(file)
-        prov_write(file->prov_helper, __func__, get_time_usec() - start);
-
-    /* Close underlying FAPL */
-    // if(under_fapl_id > 0)
-    //     H5Pclose(under_fapl_id);
 
     /* Release copy of our VOL info */
     if(info)
