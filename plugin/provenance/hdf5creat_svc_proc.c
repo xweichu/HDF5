@@ -66,6 +66,7 @@ list * read_dataset_1_svc(list * lst, struct svc_req * req){
 
 	res->data.data_len = 5*sizeof(int);
 	res->data.data_val = dset_data;
+	res->data.data_val[0] = 99;
 
 	printf("data:");
     for(int i =0; i<5; i++){
