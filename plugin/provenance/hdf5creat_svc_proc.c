@@ -48,7 +48,7 @@ int * open_file_1_svc(char ** name, struct svc_req * req){
 dataset * read_dataset_1_svc(list * lst, struct svc_req * req){
 	list *ptr;
     ptr = lst;
-	int *p;
+
 	static dataset res;
 	res.data.data_len = 5;
 	
@@ -62,7 +62,7 @@ dataset * read_dataset_1_svc(list * lst, struct svc_req * req){
 	hid_t dataset_id = H5Dopen2(file_id, ptr->dsname, H5P_DEFAULT);
 
 	H5Dread(dataset_id, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, 
-                    p);
+                    res.data.data_val);
 
 
 	// res.data[0] = 99;
