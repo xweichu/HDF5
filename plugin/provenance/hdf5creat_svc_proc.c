@@ -50,7 +50,6 @@ dataset * read_dataset_1_svc(list * lst, struct svc_req * req){
     ptr = lst;
 
 	static dataset res;
-	printf("filename:%s, datasetname:%s \n", ptr->name, ptr->dsname);
 	
 	hid_t file_id = H5Fopen(ptr->name,H5F_ACC_RDWR,H5P_DEFAULT);
 	hid_t dataset_id = H5Dopen2(file_id, ptr->dsname, H5P_DEFAULT);
@@ -59,11 +58,9 @@ dataset * read_dataset_1_svc(list * lst, struct svc_req * req){
 	hsize_t dims[ndims];
 	H5Sget_simple_extent_dims(dspace, dims, NULL);
 
-	printf("ndims:%d\n",ndims);
 
 	int size = 1;
 	for(int i=0; i<ndims; i++){
-		printf("dims:%d\n",dims[i]);
 		size = size * dims[i];
 	}
 
@@ -77,10 +74,6 @@ dataset * read_dataset_1_svc(list * lst, struct svc_req * req){
 	for(int i=0; i<size; i++){
 		res.data.data_val[i] = buf[i];
 	}
-
-
-
-	printf("len:%d,\n",res.data.data_len);
 
 	H5Dclose(dataset_id);
 	H5Fclose(file_id);
