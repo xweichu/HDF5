@@ -12,7 +12,7 @@ int main() {
    /* Initialize the first dataset. */
    for (i = 0; i < 3; i++)
       for (j = 0; j < 3; j++)
-         dset1_data[i][j] = j + 1;
+         dset1_data[i][j] = j + i + 1;
 
 
    /* Create a file. */
