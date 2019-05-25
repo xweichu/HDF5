@@ -2935,7 +2935,7 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
     dims[0]=3;
     dims[1]=3;
 
-    // space_id = H5Screate_simple(2, dims, NULL);
+    space_id = H5Screate_simple(2, dims, NULL);
 
     list *lst;
     lst = (list*)malloc(sizeof(list));
