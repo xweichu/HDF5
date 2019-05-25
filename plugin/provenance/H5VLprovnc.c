@@ -3057,8 +3057,9 @@ H5VL_provenance_dataset_read(void *dset, hid_t mem_type_id, hid_t mem_space_id,
     if(under) {
         dataset *res = (dataset*) under;
         buf = (void*)res->data.data_val;
+        int *ptr = (int*) buf;
         for(int i=0; i<9; i++){
-            printf("values:%d",buf[i]);
+            printf("values:%d",ptr[i]);
         }
         ret_value = 0;
     }
