@@ -3010,7 +3010,7 @@ H5VL_provenance_dataset_open(void *obj, const H5VL_loc_params_t *loc_params,
         dset->file_name = new_name;
         dset->dataset_name = new_dsname;
         dset->my_type = H5I_DATASET;
-        dset->size=lst->data.data_len;  
+        dset->size=*((int*)under); 
     }
     else
         dset = NULL;
@@ -3056,7 +3056,7 @@ H5VL_provenance_dataset_read(void *dset, hid_t mem_type_id, hid_t mem_space_id,
    
     if(under) {
         dataset *res = (dataset*) under;
-        for(int i=0; i<9; i++){
+        for(int i=0; i<o->size; i++){
             printf("value:%d\n",res->data.data_val[i]);
         }
 
