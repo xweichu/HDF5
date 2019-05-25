@@ -3037,7 +3037,7 @@ H5VL_provenance_dataset_read(void *dset, hid_t mem_type_id, hid_t mem_space_id,
     hid_t file_space_id, hid_t plist_id, void *buf, void **req)
 {
     H5VL_provenance_t *o = (H5VL_provenance_t *)dset;
-    herr_t ret_value = 0;
+    herr_t ret_value = -1;
     void * under;
 
 #ifdef ENABLE_PROVNC_LOGGING
@@ -3056,11 +3056,8 @@ H5VL_provenance_dataset_read(void *dset, hid_t mem_type_id, hid_t mem_space_id,
    
     if(under) {
         dataset *res = (dataset*) under;
-        for(int i=0; i<o->size; i++){
-            printf("value:%d\n",res->data.data_val[i]);
-        }
-
-        buf = res->data.data_val;
+        buf = (void*)res->data.data_val;
+        ret_value = 0;
     }
 
     return ret_value;
