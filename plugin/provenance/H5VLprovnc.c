@@ -3083,7 +3083,7 @@ H5VL_provenance_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id,
     
     printf("write start size =  %d:\n", o->size);
     int* ptr = buf;
-    for(int i=0; i<6; i++){
+    for(int i=0; i<10; i++){
         printf("%d,",ptr[i]);
     }
     printf("\n");
