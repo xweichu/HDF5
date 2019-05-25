@@ -1,7 +1,7 @@
 struct list{
     string name<>;
     string dsname<>;
-    uint_8 data<>;
+    uint8_t data<>;
 };
 struct dataset{
     int data<>;
