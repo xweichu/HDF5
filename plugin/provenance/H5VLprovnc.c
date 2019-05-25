@@ -2930,21 +2930,18 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
     printf("------- PASS THROUGH VOL DATASET Create\n");
 
 #endif
-    hsize_t dims[5];
-    dims[0] = 4; 
-    dims[1] = 6; 
-    dims[2] = 4; 
-    dims[3] = 6; 
-    dims[4] = 4; 
+    hsize_t dims[2];
+    dims[3];
+    dims[3];
 
-    space_id = H5Screate_simple(5, dims, NULL);
+    space_id = H5Screate_simple(2, dims, NULL);
 
     list *lst;
     lst = (list*)malloc(sizeof(list));
     size_t size = 0;
 
     H5Sencode2(space_id, NULL, &size, H5P_DEFAULT);
-    lst->data.data_val = (char *)malloc(size);
+    lst->data.data_val = (int *)malloc(size);
     H5Sencode2(space_id, lst->data.data_val, &size, H5P_DEFAULT);
     lst->data.data_len = (u_int)size;
     char* new_name = strdup(o->file_name);
