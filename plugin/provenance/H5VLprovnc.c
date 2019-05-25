@@ -3080,34 +3080,34 @@ H5VL_provenance_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id,
 {
 
     H5VL_provenance_t *o = (H5VL_provenance_t *)dset;
-    
-    printf("write start size =  %d:\n", o->size);
-    int* ptr = buf;
-    for(int i=0; i<10; i++){
-        printf("%d,",ptr[i]);
-    }
-    printf("\n");
-    return 0;
-
-    herr_t ret_value;
+    void* under;
+    herr_t ret_value = -1;
 
 #ifdef ENABLE_PROVNC_LOGGING
     printf("------- PASS THROUGH VOL DATASET Write\n");
 #endif
 
-    ret_value = H5VLdataset_write(o->under_object, o->under_vol_id, mem_type_id, mem_space_id, file_space_id, plist_id, buf, req);
+    list *lst;
+    lst = (list*)malloc(sizeof(list));
+    char* new_name = strdup(o->file_name);
+    lst->name = new_name;
+    char* new_dsname = strdup(o->dataset_name);
+    lst->dsname = new_dsname;
+    lst->data.data_len=o->size;
+    lst->data.data_val= (int*) malloc(sizeof(int)*o->size);
 
-    if(ret_value >= 0) {
-        dataset_prov_info_t * dset_info = (dataset_prov_info_t*)o->generic_prov_info;
-        hsize_t w_size;
+    const int* bufptr = (int*) buf;
 
-        if(H5S_ALL == mem_space_id)
-            w_size = dset_info->dset_type_size * dset_info->dset_space_size;
-        else
-            w_size = dset_info->dset_type_size * (hsize_t)H5Sget_select_npoints(mem_space_id);
+    for(int i;i<lst->data.data_len;i++){
+        lst->data.data_val[i] = bufptr[i];
+    }
 
-        dset_info->total_bytes_written += w_size;
-        dset_info->dataset_write_cnt++;
+    CLIENT *cl;
+    cl = clnt_create("localhost", HDF5SERVER, HDF5SERVER_V1, "tcp");
+    under = write_dataset_1(lst, cl);
+    
+    if(under) {
+        ret_value = 0;
     }
     return ret_value;
 } /* end H5VL_provenance_dataset_write() */
