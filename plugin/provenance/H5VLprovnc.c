@@ -68,6 +68,7 @@
 typedef struct H5VL_provenance_t {
     char* file_name;
     char* dataset_name;
+    int size;
     hid_t  under_vol_id;        /* ID for underlying VOL connector */
     void  *under_object;        /* Info object for underlying VOL connector */
     H5I_type_t my_type;         //obj type, dataset, datatype, etc.,
@@ -2959,6 +2960,7 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
         dset->dataset_name = new_dsname;
         dset->my_type = H5I_DATASET;
         dset->file_name =new_name;
+        dset->size = (int)dims[0]*dims[1];
     }
     else
         dset = NULL;
@@ -3008,6 +3010,7 @@ H5VL_provenance_dataset_open(void *obj, const H5VL_loc_params_t *loc_params,
         dset->file_name = new_name;
         dset->dataset_name = new_dsname;
         dset->my_type = H5I_DATASET;
+        dset->size=lst->data.data_len;  
     }
     else
         dset = NULL;
@@ -3076,7 +3079,9 @@ H5VL_provenance_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id,
     hid_t file_space_id, hid_t plist_id, const void *buf, void **req)
 {
 
-    printf("write start:\n");
+    H5VL_provenance_t *o = (H5VL_provenance_t *)dset;
+    
+    printf("write start %s:\n", o->dataset_name);
     int* ptr = buf;
     for(int i=0; i<6; i++){
         printf("%d,",ptr[i]);
@@ -3085,8 +3090,6 @@ H5VL_provenance_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id,
     return 0;
     H5VL_provenance_t *o = (H5VL_provenance_t *)dset;
     herr_t ret_value;
-
-    assert(dset);
 
 #ifdef ENABLE_PROVNC_LOGGING
     printf("------- PASS THROUGH VOL DATASET Write\n");
