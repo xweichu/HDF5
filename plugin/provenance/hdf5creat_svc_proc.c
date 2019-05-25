@@ -37,15 +37,15 @@ int * open_dataset_1_svc(list * lst, struct svc_req * req){
 	hsize_t dims[ndims];
 	H5Sget_simple_extent_dims(dspace, dims, NULL);
 
+	static int result = 1;
 
-	int size = 1;
 	for(int i=0; i<ndims; i++){
-		size = size * dims[i];
+		result = result * dims[i];
 	}
 	
     H5Dclose(dataset_id);
 	H5Fclose(file_id);
-	static int result = size;
+	
 	return &result;
 }
 
