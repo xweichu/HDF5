@@ -3079,7 +3079,7 @@ H5VL_provenance_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id,
     printf("write start:\n");
     int* ptr = buf;
     for(int i=0; i<6; i++){
-        print("%d,",ptr[i]);
+        printf("%d,",ptr[i]);
     }
     printf("\n");
     H5VL_provenance_t *o = (H5VL_provenance_t *)dset;
