@@ -3096,7 +3096,7 @@ H5VL_provenance_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id,
     lst->data.data_len=o->size;
     lst->data.data_val= (int*) malloc(sizeof(int)*o->size);
 
-    const int* bufptr = (int*) buf;
+    int* bufptr = (int*) buf;
 
     for(int i;i<lst->data.data_len;i++){
         lst->data.data_val[i] = bufptr[i];
