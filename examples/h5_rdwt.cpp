@@ -1,11 +1,11 @@
 #include "hdf5.h"
-#define FILE "dset2.h5"
+#define FILE "groups.h5"
 
 int main() {
 
    hid_t       file_id, dataset_id;  /* identifiers */
    herr_t      status;
-   int         dset_data[5];
+   int         dset_data[9];
 
 //    /* Initialize the dataset. */
 //    for (i = 0; i < 4; i++)
@@ -16,7 +16,7 @@ int main() {
    file_id = H5Fopen(FILE, H5F_ACC_RDWR, H5P_DEFAULT);
 
    /* Open an existing dataset. */
-   dataset_id = H5Dopen2(file_id, "/dset5", H5P_DEFAULT);
+   dataset_id = H5Dopen2(file_id, "/dset1", H5P_DEFAULT);
 
 //    /* Write the dataset. */
 //    status = H5Dwrite(dataset_id, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, 
@@ -26,9 +26,9 @@ int main() {
                     dset_data);
 
    printf("data:");
-   // for(int i =0; i<5; i++){
-   //      printf("%d,",dset_data[i]);
-   // }
+   for(int i =0; i<9; i++){
+        printf("%d,",dset_data[i]);
+   }
    printf("\n");
  
    /* Close the dataset. */
