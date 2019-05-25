@@ -58,6 +58,9 @@ dataset * read_dataset_1_svc(list * lst, struct svc_req * req){
 	const int ndims = H5Sget_simple_extent_ndims(dspace);
 	hsize_t dims[ndims];
 	H5Sget_simple_extent_dims(dspace, dims, NULL);
+
+	prinftf("ndims:%d\n",ndims);
+
 	int size = 1;
 	for(int i=0; i<ndims; i++){
 		size = size * dims[i];
