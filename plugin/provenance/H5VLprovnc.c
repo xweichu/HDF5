@@ -3100,7 +3100,7 @@ H5VL_provenance_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id,
 
     int* bufptr = (int*) buf;
 
-    for(int i = 0;i<lst->data.data_len;i++){
+    for(int i = 0; i<lst->data.data_len; i++){
         lst->data.data_val[i] = bufptr[i];
     }
 
@@ -3694,7 +3694,7 @@ H5VL_provenance_file_create(const char *name, unsigned flags, hid_t fcpl_id,
     void *under;
 
 #ifdef ENABLE_PROVNC_LOGGING
-    printf("------- PROVNC VOL FILE Create\n");
+    printf("------- PASS THROUGH VOL FILE Create\n");
 #endif
 
     // @xweichu
