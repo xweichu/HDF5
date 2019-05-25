@@ -51,14 +51,14 @@ int main() {
    dataset_id = H5Dcreate(file_id, "/dset2", H5T_STD_I32BE, dataspace_id, 
                           H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
    
-   // dataset_id = H5Dcreate(file_id, "/dset3", H5T_STD_I32BE, dataspace_id, 
-   //                        H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+   dataset_id = H5Dcreate(file_id, "/dset3", H5T_STD_I32BE, dataspace_id, 
+                          H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
    
-   // dataset_id = H5Dcreate(file_id, "/dset4", H5T_STD_I32BE, dataspace_id, 
-   //                        H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+   dataset_id = H5Dcreate(file_id, "/dset4", H5T_STD_I32BE, dataspace_id, 
+                          H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
-   // dataset_id = H5Dcreate(file_id, "/dset5", H5T_STD_I32BE, dataspace_id, 
-   //                        H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+   dataset_id = H5Dcreate(file_id, "/dset5", H5T_STD_I32BE, dataspace_id, 
+                          H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
    printf("test\n");
    // /* End access to the dataset and release resources used by it. */
    // status = H5Dclose(dataset_id);
