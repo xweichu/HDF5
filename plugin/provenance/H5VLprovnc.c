@@ -3083,6 +3083,8 @@ H5VL_provenance_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id,
     void* under;
     herr_t ret_value = -1;
 
+    printf("size : %d\n", o->size);
+
 #ifdef ENABLE_PROVNC_LOGGING
     printf("------- PASS THROUGH VOL DATASET Write\n");
 #endif

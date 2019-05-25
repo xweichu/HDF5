@@ -14,7 +14,6 @@ int main() {
       for (j = 0; j < 3; j++)
          dset1_data[i][j] = j + i + 1;
 
-
    /* Create a file. */
    file_id = H5Fcreate(FILE, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
