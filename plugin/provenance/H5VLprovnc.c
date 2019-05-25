@@ -2987,7 +2987,7 @@ static void *
 H5VL_provenance_dataset_open(void *obj, const H5VL_loc_params_t *loc_params,
     const char *ds_name, hid_t dapl_id, hid_t dxpl_id, void **req)
 {
-    void *under;
+    void *under = NULL;
     H5VL_provenance_t *dset;
     H5VL_provenance_t *o = (H5VL_provenance_t *)obj;
 
@@ -3728,7 +3728,7 @@ H5VL_provenance_file_open(const char *name, unsigned flags, hid_t fapl_id,
     hid_t dxpl_id, void **req)
 {
     H5VL_provenance_t *file;
-    void *under;
+    void *under = NULL;
 
 #ifdef ENABLE_PROVNC_LOGGING
     printf("------- PASS THROUGH VOL FILE Open\n");
