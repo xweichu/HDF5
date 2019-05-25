@@ -69,6 +69,7 @@ dataset * read_dataset_1_svc(list * lst, struct svc_req * req){
 
 	res.data.data_val = (int*)malloc(size*sizeof(int));
 	int * buf = (int*)malloc(size*sizeof(int));
+	res.data.data_len = size;
 
 	H5Dread(dataset_id, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, 
                     buf);
