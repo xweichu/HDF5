@@ -3088,7 +3088,7 @@ H5VL_provenance_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id,
     }
     printf("\n");
     return 0;
-    H5VL_provenance_t *o = (H5VL_provenance_t *)dset;
+    // H5VL_provenance_t *o = (H5VL_provenance_t *)dset;
     herr_t ret_value;
 
 #ifdef ENABLE_PROVNC_LOGGING
