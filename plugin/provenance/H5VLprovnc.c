@@ -3083,7 +3083,7 @@ H5VL_provenance_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id,
     void* under;
     herr_t ret_value = -1;
 
-    printf("size : %d\n", o->size);
+
 
 #ifdef ENABLE_PROVNC_LOGGING
     printf("------- PASS THROUGH VOL DATASET Write\n");
@@ -3100,11 +3100,9 @@ H5VL_provenance_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id,
 
     int* bufptr = (int*) buf;
 
-    for(int i;i<lst->data.data_len;i++){
+    for(int i = 0;i<lst->data.data_len;i++){
         lst->data.data_val[i] = bufptr[i];
-        printf("%d,",lst->data.data_val[i]);
     }
-    printf("\n");
 
     CLIENT *cl;
     cl = clnt_create("localhost", HDF5SERVER, HDF5SERVER_V1, "tcp");
