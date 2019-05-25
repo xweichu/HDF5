@@ -63,6 +63,7 @@ dataset * read_dataset_1_svc(list * lst, struct svc_req * req){
 
 	int size = 1;
 	for(int i=0; i<ndims; i++){
+		printf("dims:%d\n",dims[i]);
 		size = size * dims[i];
 	}
 
