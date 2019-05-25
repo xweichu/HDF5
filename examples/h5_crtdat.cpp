@@ -27,7 +27,7 @@ using namespace std;
 int main() {
 
    hid_t       file_id, dataset_id, dataspace_id;  /* identifiers */
-   int     dims[2];
+   hsize_t     dims[2];
    herr_t      status;
 
    cout<< "test 0" <<endl;
