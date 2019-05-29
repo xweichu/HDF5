@@ -83,3 +83,18 @@ read_dataset_1(list *argp, CLIENT *clnt)
 	}
 	return (&clnt_res);
 }
+
+int *
+write_dataset_1(list *argp, CLIENT *clnt)
+{
+	static int clnt_res;
+
+	memset((char *)&clnt_res, 0, sizeof(clnt_res));
+	if (clnt_call (clnt, write_dataset,
+		(xdrproc_t) xdr_list, (caddr_t) argp,
+		(xdrproc_t) xdr_int, (caddr_t) &clnt_res,
+		TIMEOUT) != RPC_SUCCESS) {
+		return (NULL);
+	}
+	return (&clnt_res);
+}

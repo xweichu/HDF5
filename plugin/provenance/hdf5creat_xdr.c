@@ -15,7 +15,7 @@ xdr_list (XDR *xdrs, list *objp)
 	 if (!xdr_string (xdrs, &objp->dsname, ~0))
 		 return FALSE;
 	 if (!xdr_array (xdrs, (char **)&objp->data.data_val, (u_int *) &objp->data.data_len, ~0,
-		sizeof (uint8_t), (xdrproc_t) xdr_uint8_t))
+		sizeof (int), (xdrproc_t) xdr_int))
 		 return FALSE;
 	return TRUE;
 }

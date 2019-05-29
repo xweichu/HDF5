@@ -19,7 +19,7 @@ struct list {
 	char *dsname;
 	struct {
 		u_int data_len;
-		uint8_t *data_val;
+		int *data_val;
 	} data;
 };
 typedef struct list list;
@@ -51,6 +51,9 @@ extern  int * open_file_1_svc(char **, struct svc_req *);
 #define read_dataset 5
 extern  dataset * read_dataset_1(list *, CLIENT *);
 extern  dataset * read_dataset_1_svc(list *, struct svc_req *);
+#define write_dataset 6
+extern  int * write_dataset_1(list *, CLIENT *);
+extern  int * write_dataset_1_svc(list *, struct svc_req *);
 extern int hdf5server_1_freeresult (SVCXPRT *, xdrproc_t, caddr_t);
 
 #else /* K&R C */
@@ -69,6 +72,9 @@ extern  int * open_file_1_svc();
 #define read_dataset 5
 extern  dataset * read_dataset_1();
 extern  dataset * read_dataset_1_svc();
+#define write_dataset 6
+extern  int * write_dataset_1();
+extern  int * write_dataset_1_svc();
 extern int hdf5server_1_freeresult ();
 #endif /* K&R C */
 

@@ -1,0 +1,190 @@
+The system is: Linux - 4.4.0-45-generic - x86_64
+Compiling the C compiler identification source file "CMakeCCompilerId.c" succeeded.
+Compiler: /usr/bin/cc 
+Build flags: 
+Id flags: 
+
+The output was:
+0
+
+
+Compilation of the C compiler identification source "CMakeCCompilerId.c" produced "a.out"
+
+The C compiler identification is GNU, found in "/users/xweichu/projects/HDF5/plugin/rados-api/CMakeFiles/3.5.1/CompilerIdC/a.out"
+
+Determining if the C compiler works passed with the following output:
+Change Dir: /users/xweichu/projects/HDF5/plugin/rados-api/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_a7b94/fast"
+/usr/bin/make -f CMakeFiles/cmTC_a7b94.dir/build.make CMakeFiles/cmTC_a7b94.dir/build
+make[1]: Entering directory '/users/xweichu/projects/HDF5/plugin/rados-api/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_a7b94.dir/testCCompiler.c.o
+/usr/bin/cc     -o CMakeFiles/cmTC_a7b94.dir/testCCompiler.c.o   -c /users/xweichu/projects/HDF5/plugin/rados-api/CMakeFiles/CMakeTmp/testCCompiler.c
+Linking C executable cmTC_a7b94
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_a7b94.dir/link.txt --verbose=1
+/usr/bin/cc       CMakeFiles/cmTC_a7b94.dir/testCCompiler.c.o  -o cmTC_a7b94 -rdynamic 
+make[1]: Leaving directory '/users/xweichu/projects/HDF5/plugin/rados-api/CMakeFiles/CMakeTmp'
+
+
+Detecting C compiler ABI info compiled with the following output:
+Change Dir: /users/xweichu/projects/HDF5/plugin/rados-api/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_04826/fast"
+/usr/bin/make -f CMakeFiles/cmTC_04826.dir/build.make CMakeFiles/cmTC_04826.dir/build
+make[1]: Entering directory '/users/xweichu/projects/HDF5/plugin/rados-api/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_04826.dir/CMakeCCompilerABI.c.o
+/usr/bin/cc     -o CMakeFiles/cmTC_04826.dir/CMakeCCompilerABI.c.o   -c /usr/share/cmake-3.5/Modules/CMakeCCompilerABI.c
+Linking C executable cmTC_04826
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_04826.dir/link.txt --verbose=1
+/usr/bin/cc      -v CMakeFiles/cmTC_04826.dir/CMakeCCompilerABI.c.o  -o cmTC_04826 -rdynamic  
+Using built-in specs.
+COLLECT_GCC=/usr/bin/cc
+COLLECT_LTO_WRAPPER=/usr/local/gcc-6.2/libexec/gcc/x86_64-linux-gnu/5.4.0/lto-wrapper
+Target: x86_64-linux-gnu
+Configured with: ../gcc-5.4.0/configure -v --build=x86_64-linux-gnu --host=x86_64-linux-gnu --target=x86_64-linux-gnu --prefix=/usr/local/gcc-6.2 --enable-checking=release --enable-languages=c,c++,fortran --disable-multilib
+Thread model: posix
+gcc version 5.4.0 (GCC) 
+COMPILER_PATH=/usr/local/gcc-6.2/libexec/gcc/x86_64-linux-gnu/5.4.0/:/usr/local/gcc-6.2/libexec/gcc/x86_64-linux-gnu/5.4.0/:/usr/local/gcc-6.2/libexec/gcc/x86_64-linux-gnu/:/usr/local/gcc-6.2/lib/gcc/x86_64-linux-gnu/5.4.0/:/usr/local/gcc-6.2/lib/gcc/x86_64-linux-gnu/
+LIBRARY_PATH=/usr/local/gcc-6.2/lib/gcc/x86_64-linux-gnu/5.4.0/:/usr/local/gcc-6.2/lib/gcc/x86_64-linux-gnu/5.4.0/../../../../lib64/:/lib/x86_64-linux-gnu/:/lib/../lib64/:/usr/lib/x86_64-linux-gnu/:/usr/local/gcc-6.2/lib/gcc/x86_64-linux-gnu/5.4.0/../../../:/lib/:/usr/lib/
+COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_04826' '-rdynamic' '-mtune=generic' '-march=x86-64'
+ /usr/local/gcc-6.2/libexec/gcc/x86_64-linux-gnu/5.4.0/collect2 -plugin /usr/local/gcc-6.2/libexec/gcc/x86_64-linux-gnu/5.4.0/liblto_plugin.so -plugin-opt=/usr/local/gcc-6.2/libexec/gcc/x86_64-linux-gnu/5.4.0/lto-wrapper -plugin-opt=-fresolution=/tmp/ccAO5T1E.res -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s --eh-frame-hdr -m elf_x86_64 -export-dynamic -dynamic-linker /lib64/ld-linux-x86-64.so.2 -o cmTC_04826 /usr/lib/x86_64-linux-gnu/crt1.o /usr/lib/x86_64-linux-gnu/crti.o /usr/local/gcc-6.2/lib/gcc/x86_64-linux-gnu/5.4.0/crtbegin.o -L/usr/local/gcc-6.2/lib/gcc/x86_64-linux-gnu/5.4.0 -L/usr/local/gcc-6.2/lib/gcc/x86_64-linux-gnu/5.4.0/../../../../lib64 -L/lib/x86_64-linux-gnu -L/lib/../lib64 -L/usr/lib/x86_64-linux-gnu -L/usr/local/gcc-6.2/lib/gcc/x86_64-linux-gnu/5.4.0/../../.. CMakeFiles/cmTC_04826.dir/CMakeCCompilerABI.c.o -lgcc --as-needed -lgcc_s --no-as-needed -lc -lgcc --as-needed -lgcc_s --no-as-needed /usr/local/gcc-6.2/lib/gcc/x86_64-linux-gnu/5.4.0/crtend.o /usr/lib/x86_64-linux-gnu/crtn.o
+make[1]: Leaving directory '/users/xweichu/projects/HDF5/plugin/rados-api/CMakeFiles/CMakeTmp'
+
+
+Parsed C implicit link information from above output:
+  link line regex: [^( *|.*[/\])(ld|([^/\]+-)?ld|collect2)[^/\]*( |$)]
+  ignore line: [Change Dir: /users/xweichu/projects/HDF5/plugin/rados-api/CMakeFiles/CMakeTmp]
+  ignore line: []
+  ignore line: [Run Build Command:"/usr/bin/make" "cmTC_04826/fast"]
+  ignore line: [/usr/bin/make -f CMakeFiles/cmTC_04826.dir/build.make CMakeFiles/cmTC_04826.dir/build]
+  ignore line: [make[1]: Entering directory '/users/xweichu/projects/HDF5/plugin/rados-api/CMakeFiles/CMakeTmp']
+  ignore line: [Building C object CMakeFiles/cmTC_04826.dir/CMakeCCompilerABI.c.o]
+  ignore line: [/usr/bin/cc     -o CMakeFiles/cmTC_04826.dir/CMakeCCompilerABI.c.o   -c /usr/share/cmake-3.5/Modules/CMakeCCompilerABI.c]
+  ignore line: [Linking C executable cmTC_04826]
+  ignore line: [/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_04826.dir/link.txt --verbose=1]
+  ignore line: [/usr/bin/cc      -v CMakeFiles/cmTC_04826.dir/CMakeCCompilerABI.c.o  -o cmTC_04826 -rdynamic  ]
+  ignore line: [Using built-in specs.]
+  ignore line: [COLLECT_GCC=/usr/bin/cc]
+  ignore line: [COLLECT_LTO_WRAPPER=/usr/local/gcc-6.2/libexec/gcc/x86_64-linux-gnu/5.4.0/lto-wrapper]
+  ignore line: [Target: x86_64-linux-gnu]
+  ignore line: [Configured with: ../gcc-5.4.0/configure -v --build=x86_64-linux-gnu --host=x86_64-linux-gnu --target=x86_64-linux-gnu --prefix=/usr/local/gcc-6.2 --enable-checking=release --enable-languages=c,c++,fortran --disable-multilib]
+  ignore line: [Thread model: posix]
+  ignore line: [gcc version 5.4.0 (GCC) ]
+  ignore line: [COMPILER_PATH=/usr/local/gcc-6.2/libexec/gcc/x86_64-linux-gnu/5.4.0/:/usr/local/gcc-6.2/libexec/gcc/x86_64-linux-gnu/5.4.0/:/usr/local/gcc-6.2/libexec/gcc/x86_64-linux-gnu/:/usr/local/gcc-6.2/lib/gcc/x86_64-linux-gnu/5.4.0/:/usr/local/gcc-6.2/lib/gcc/x86_64-linux-gnu/]
+  ignore line: [LIBRARY_PATH=/usr/local/gcc-6.2/lib/gcc/x86_64-linux-gnu/5.4.0/:/usr/local/gcc-6.2/lib/gcc/x86_64-linux-gnu/5.4.0/../../../../lib64/:/lib/x86_64-linux-gnu/:/lib/../lib64/:/usr/lib/x86_64-linux-gnu/:/usr/local/gcc-6.2/lib/gcc/x86_64-linux-gnu/5.4.0/../../../:/lib/:/usr/lib/]
+  ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_04826' '-rdynamic' '-mtune=generic' '-march=x86-64']
+  link line: [ /usr/local/gcc-6.2/libexec/gcc/x86_64-linux-gnu/5.4.0/collect2 -plugin /usr/local/gcc-6.2/libexec/gcc/x86_64-linux-gnu/5.4.0/liblto_plugin.so -plugin-opt=/usr/local/gcc-6.2/libexec/gcc/x86_64-linux-gnu/5.4.0/lto-wrapper -plugin-opt=-fresolution=/tmp/ccAO5T1E.res -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s --eh-frame-hdr -m elf_x86_64 -export-dynamic -dynamic-linker /lib64/ld-linux-x86-64.so.2 -o cmTC_04826 /usr/lib/x86_64-linux-gnu/crt1.o /usr/lib/x86_64-linux-gnu/crti.o /usr/local/gcc-6.2/lib/gcc/x86_64-linux-gnu/5.4.0/crtbegin.o -L/usr/local/gcc-6.2/lib/gcc/x86_64-linux-gnu/5.4.0 -L/usr/local/gcc-6.2/lib/gcc/x86_64-linux-gnu/5.4.0/../../../../lib64 -L/lib/x86_64-linux-gnu -L/lib/../lib64 -L/usr/lib/x86_64-linux-gnu -L/usr/local/gcc-6.2/lib/gcc/x86_64-linux-gnu/5.4.0/../../.. CMakeFiles/cmTC_04826.dir/CMakeCCompilerABI.c.o -lgcc --as-needed -lgcc_s --no-as-needed -lc -lgcc --as-needed -lgcc_s --no-as-needed /usr/local/gcc-6.2/lib/gcc/x86_64-linux-gnu/5.4.0/crtend.o /usr/lib/x86_64-linux-gnu/crtn.o]
+    arg [/usr/local/gcc-6.2/libexec/gcc/x86_64-linux-gnu/5.4.0/collect2] ==> ignore
+    arg [-plugin] ==> ignore
+    arg [/usr/local/gcc-6.2/libexec/gcc/x86_64-linux-gnu/5.4.0/liblto_plugin.so] ==> ignore
+    arg [-plugin-opt=/usr/local/gcc-6.2/libexec/gcc/x86_64-linux-gnu/5.4.0/lto-wrapper] ==> ignore
+    arg [-plugin-opt=-fresolution=/tmp/ccAO5T1E.res] ==> ignore
+    arg [-plugin-opt=-pass-through=-lgcc] ==> ignore
+    arg [-plugin-opt=-pass-through=-lgcc_s] ==> ignore
+    arg [-plugin-opt=-pass-through=-lc] ==> ignore
+    arg [-plugin-opt=-pass-through=-lgcc] ==> ignore
+    arg [-plugin-opt=-pass-through=-lgcc_s] ==> ignore
+    arg [--eh-frame-hdr] ==> ignore
+    arg [-m] ==> ignore
+    arg [elf_x86_64] ==> ignore
+    arg [-export-dynamic] ==> ignore
+    arg [-dynamic-linker] ==> ignore
+    arg [/lib64/ld-linux-x86-64.so.2] ==> ignore
+    arg [-o] ==> ignore
+    arg [cmTC_04826] ==> ignore
+    arg [/usr/lib/x86_64-linux-gnu/crt1.o] ==> ignore
+    arg [/usr/lib/x86_64-linux-gnu/crti.o] ==> ignore
+    arg [/usr/local/gcc-6.2/lib/gcc/x86_64-linux-gnu/5.4.0/crtbegin.o] ==> ignore
+    arg [-L/usr/local/gcc-6.2/lib/gcc/x86_64-linux-gnu/5.4.0] ==> dir [/usr/local/gcc-6.2/lib/gcc/x86_64-linux-gnu/5.4.0]
+    arg [-L/usr/local/gcc-6.2/lib/gcc/x86_64-linux-gnu/5.4.0/../../../../lib64] ==> dir [/usr/local/gcc-6.2/lib/gcc/x86_64-linux-gnu/5.4.0/../../../../lib64]
+    arg [-L/lib/x86_64-linux-gnu] ==> dir [/lib/x86_64-linux-gnu]
+    arg [-L/lib/../lib64] ==> dir [/lib/../lib64]
+    arg [-L/usr/lib/x86_64-linux-gnu] ==> dir [/usr/lib/x86_64-linux-gnu]
+    arg [-L/usr/local/gcc-6.2/lib/gcc/x86_64-linux-gnu/5.4.0/../../..] ==> dir [/usr/local/gcc-6.2/lib/gcc/x86_64-linux-gnu/5.4.0/../../..]
+    arg [CMakeFiles/cmTC_04826.dir/CMakeCCompilerABI.c.o] ==> ignore
+    arg [-lgcc] ==> lib [gcc]
+    arg [--as-needed] ==> ignore
+    arg [-lgcc_s] ==> lib [gcc_s]
+    arg [--no-as-needed] ==> ignore
+    arg [-lc] ==> lib [c]
+    arg [-lgcc] ==> lib [gcc]
+    arg [--as-needed] ==> ignore
+    arg [-lgcc_s] ==> lib [gcc_s]
+    arg [--no-as-needed] ==> ignore
+    arg [/usr/local/gcc-6.2/lib/gcc/x86_64-linux-gnu/5.4.0/crtend.o] ==> ignore
+    arg [/usr/lib/x86_64-linux-gnu/crtn.o] ==> ignore
+  remove lib [gcc]
+  remove lib [gcc_s]
+  remove lib [gcc]
+  remove lib [gcc_s]
+  collapse library dir [/usr/local/gcc-6.2/lib/gcc/x86_64-linux-gnu/5.4.0] ==> [/usr/local/gcc-6.2/lib/gcc/x86_64-linux-gnu/5.4.0]
+  collapse library dir [/usr/local/gcc-6.2/lib/gcc/x86_64-linux-gnu/5.4.0/../../../../lib64] ==> [/usr/local/gcc-6.2/lib64]
+  collapse library dir [/lib/x86_64-linux-gnu] ==> [/lib/x86_64-linux-gnu]
+  collapse library dir [/lib/../lib64] ==> [/lib64]
+  collapse library dir [/usr/lib/x86_64-linux-gnu] ==> [/usr/lib/x86_64-linux-gnu]
+  collapse library dir [/usr/local/gcc-6.2/lib/gcc/x86_64-linux-gnu/5.4.0/../../..] ==> [/usr/local/gcc-6.2/lib]
+  implicit libs: [c]
+  implicit dirs: [/usr/local/gcc-6.2/lib/gcc/x86_64-linux-gnu/5.4.0;/usr/local/gcc-6.2/lib64;/lib/x86_64-linux-gnu;/lib64;/usr/lib/x86_64-linux-gnu;/usr/local/gcc-6.2/lib]
+  implicit fwks: []
+
+
+
+
+Detecting C [-std=c11] compiler features compiled with the following output:
+Change Dir: /users/xweichu/projects/HDF5/plugin/rados-api/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_c3f73/fast"
+/usr/bin/make -f CMakeFiles/cmTC_c3f73.dir/build.make CMakeFiles/cmTC_c3f73.dir/build
+make[1]: Entering directory '/users/xweichu/projects/HDF5/plugin/rados-api/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_c3f73.dir/feature_tests.c.o
+/usr/bin/cc    -std=c11 -o CMakeFiles/cmTC_c3f73.dir/feature_tests.c.o   -c /users/xweichu/projects/HDF5/plugin/rados-api/CMakeFiles/feature_tests.c
+Linking C executable cmTC_c3f73
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_c3f73.dir/link.txt --verbose=1
+/usr/bin/cc       CMakeFiles/cmTC_c3f73.dir/feature_tests.c.o  -o cmTC_c3f73 -rdynamic 
+make[1]: Leaving directory '/users/xweichu/projects/HDF5/plugin/rados-api/CMakeFiles/CMakeTmp'
+
+
+    Feature record: C_FEATURE:1c_function_prototypes
+    Feature record: C_FEATURE:1c_restrict
+    Feature record: C_FEATURE:1c_static_assert
+    Feature record: C_FEATURE:1c_variadic_macros
+
+
+Detecting C [-std=c99] compiler features compiled with the following output:
+Change Dir: /users/xweichu/projects/HDF5/plugin/rados-api/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_d68c4/fast"
+/usr/bin/make -f CMakeFiles/cmTC_d68c4.dir/build.make CMakeFiles/cmTC_d68c4.dir/build
+make[1]: Entering directory '/users/xweichu/projects/HDF5/plugin/rados-api/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_d68c4.dir/feature_tests.c.o
+/usr/bin/cc    -std=c99 -o CMakeFiles/cmTC_d68c4.dir/feature_tests.c.o   -c /users/xweichu/projects/HDF5/plugin/rados-api/CMakeFiles/feature_tests.c
+Linking C executable cmTC_d68c4
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_d68c4.dir/link.txt --verbose=1
+/usr/bin/cc       CMakeFiles/cmTC_d68c4.dir/feature_tests.c.o  -o cmTC_d68c4 -rdynamic 
+make[1]: Leaving directory '/users/xweichu/projects/HDF5/plugin/rados-api/CMakeFiles/CMakeTmp'
+
+
+    Feature record: C_FEATURE:1c_function_prototypes
+    Feature record: C_FEATURE:1c_restrict
+    Feature record: C_FEATURE:0c_static_assert
+    Feature record: C_FEATURE:1c_variadic_macros
+
+
+Detecting C [-std=c90] compiler features compiled with the following output:
+Change Dir: /users/xweichu/projects/HDF5/plugin/rados-api/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_1eba8/fast"
+/usr/bin/make -f CMakeFiles/cmTC_1eba8.dir/build.make CMakeFiles/cmTC_1eba8.dir/build
+make[1]: Entering directory '/users/xweichu/projects/HDF5/plugin/rados-api/CMakeFiles/CMakeTmp'
+Building C object CMakeFiles/cmTC_1eba8.dir/feature_tests.c.o
+/usr/bin/cc    -std=c90 -o CMakeFiles/cmTC_1eba8.dir/feature_tests.c.o   -c /users/xweichu/projects/HDF5/plugin/rados-api/CMakeFiles/feature_tests.c
+Linking C executable cmTC_1eba8
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_1eba8.dir/link.txt --verbose=1
+/usr/bin/cc       CMakeFiles/cmTC_1eba8.dir/feature_tests.c.o  -o cmTC_1eba8 -rdynamic 
+make[1]: Leaving directory '/users/xweichu/projects/HDF5/plugin/rados-api/CMakeFiles/CMakeTmp'
+
+
+    Feature record: C_FEATURE:1c_function_prototypes
+    Feature record: C_FEATURE:0c_restrict
+    Feature record: C_FEATURE:0c_static_assert
+    Feature record: C_FEATURE:0c_variadic_macros

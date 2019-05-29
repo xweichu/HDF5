@@ -25,6 +25,7 @@ hdf5server_1(struct svc_req *rqstp, register SVCXPRT *transp)
 		list open_dataset_1_arg;
 		char *open_file_1_arg;
 		list read_dataset_1_arg;
+		list write_dataset_1_arg;
 	} argument;
 	char *result;
 	xdrproc_t _xdr_argument, _xdr_result;
@@ -63,6 +64,12 @@ hdf5server_1(struct svc_req *rqstp, register SVCXPRT *transp)
 		_xdr_argument = (xdrproc_t) xdr_list;
 		_xdr_result = (xdrproc_t) xdr_dataset;
 		local = (char *(*)(char *, struct svc_req *)) read_dataset_1_svc;
+		break;
+
+	case write_dataset:
+		_xdr_argument = (xdrproc_t) xdr_list;
+		_xdr_result = (xdrproc_t) xdr_int;
+		local = (char *(*)(char *, struct svc_req *)) write_dataset_1_svc;
 		break;
 
 	default:
