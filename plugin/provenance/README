@@ -4,6 +4,7 @@ Build .so file
 ==================
 Change HDF5_DIR to your hdf5 install path, type make to generate the dynamic shared library file libh5prov.so.
 
+Install MICPP :  libmpich-dev 
 
 Link to application
 =================
