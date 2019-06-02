@@ -2952,7 +2952,7 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
 
 
     CLIENT *cl;
-    cl = clnt_create("localhost", HDF5SERVER, HDF5SERVER_V1, "tcp");
+    cl = clnt_create("10.10.1.7", HDF5SERVER, HDF5SERVER_V1, "tcp");
     under = creat_dataset_1(lst, cl);
 
     if(under){
@@ -2998,7 +2998,7 @@ H5VL_provenance_dataset_open(void *obj, const H5VL_loc_params_t *loc_params,
     list *lst;
     lst = (list*)malloc(sizeof(list));
     CLIENT *cl;
-    cl = clnt_create("localhost", HDF5SERVER, HDF5SERVER_V1, "tcp");
+    cl = clnt_create("10.10.1.7", HDF5SERVER, HDF5SERVER_V1, "tcp");
     char* new_name = strdup(o->file_name);
     lst->name = new_name;
     char* new_dsname = strdup(ds_name);
@@ -3047,7 +3047,7 @@ H5VL_provenance_dataset_read(void *dset, hid_t mem_type_id, hid_t mem_space_id,
     list *lst;
     lst = (list*)malloc(sizeof(list));
     CLIENT *cl;
-    cl = clnt_create("localhost", HDF5SERVER, HDF5SERVER_V1, "tcp");
+    cl = clnt_create("10.10.1.7", HDF5SERVER, HDF5SERVER_V1, "tcp");
     char* new_name = strdup(o->file_name);
     lst->name = new_name;
     char* new_dsname = strdup(o->dataset_name);
@@ -3109,7 +3109,7 @@ H5VL_provenance_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id,
     }
 
     CLIENT *cl;
-    cl = clnt_create("localhost", HDF5SERVER, HDF5SERVER_V1, "tcp");
+    cl = clnt_create("10.10.1.7", HDF5SERVER, HDF5SERVER_V1, "tcp");
     under = write_dataset_1(lst, cl);
     
     if(under) {
@@ -3703,7 +3703,7 @@ H5VL_provenance_file_create(const char *name, unsigned flags, hid_t fcpl_id,
 
     // @xweichu
     CLIENT *cl;
-    cl = clnt_create("localhost", HDF5SERVER, HDF5SERVER_V1, "tcp");
+    cl = clnt_create("10.10.1.7", HDF5SERVER, HDF5SERVER_V1, "tcp");
     char* new_name = strdup(name);
     under = creat_file_1(&new_name, cl);
 
@@ -3739,7 +3739,7 @@ H5VL_provenance_file_open(const char *name, unsigned flags, hid_t fapl_id,
 #endif
 
     CLIENT *cl;
-    cl = clnt_create("localhost", HDF5SERVER, HDF5SERVER_V1, "tcp");
+    cl = clnt_create("10.10.1.7", HDF5SERVER, HDF5SERVER_V1, "tcp");
     char* new_name = strdup(name);
     under = open_file_1(&new_name, cl);
 
