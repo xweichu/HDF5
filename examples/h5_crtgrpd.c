@@ -10,8 +10,8 @@ int main() {
    int         i, j, dset1_data[100][100];
 
    /* Initialize the first dataset. */
-   for (i = 0; i < 50; i++)
-      for (j = 0; j < 50; j++)
+   for (i = 0; i < 100; i++)
+      for (j = 0; j < 100; j++)
          dset1_data[i][j] = j + i + 1;
 
    /* Create a file. */
