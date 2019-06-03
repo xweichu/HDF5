@@ -7,7 +7,7 @@ int main() {
    hid_t       file_id, dataset_id, dataspace_id;  /* identifiers */
    hsize_t     dims[2];
    herr_t      status;
-   int         i, j, dset1_data[50][50];
+   int         i, j, dset1_data[100][100];
 
    /* Initialize the first dataset. */
    for (i = 0; i < 50; i++)
@@ -18,8 +18,8 @@ int main() {
    file_id = H5Fcreate(FILE, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
    /* Create the data space for the first dataset. */
-   dims[0] = 50;
-   dims[1] = 50;
+   dims[0] = 100;
+   dims[1] = 100;
    dataspace_id = H5Screate_simple(2, dims, NULL);
 
    /* Create a dataset in group "MyGroup". */
