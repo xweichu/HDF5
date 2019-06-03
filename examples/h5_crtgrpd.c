@@ -7,11 +7,11 @@ int main() {
    hid_t       file_id, dataset_id, dataspace_id;  /* identifiers */
    hsize_t     dims[2];
    herr_t      status;
-   int         i, j, dset1_data[3][3];
+   int         i, j, dset1_data[1000][1000];
 
    /* Initialize the first dataset. */
-   for (i = 0; i < 3; i++)
-      for (j = 0; j < 3; j++)
+   for (i = 0; i < 1000; i++)
+      for (j = 0; j < 1000; j++)
          dset1_data[i][j] = j + i + 1;
 
    /* Create a file. */
