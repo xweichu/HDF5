@@ -2924,7 +2924,7 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
     H5VL_provenance_t *dset;
     H5VL_provenance_t *o = (H5VL_provenance_t *)obj;
     void *under;
-
+    unsigned long start = get_time_usec();
 
 #ifdef ENABLE_PROVNC_LOGGING
     //@xweichu
@@ -2969,6 +2969,9 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
     H5Sclose(space_id);
     free(lst->data.data_val);
     free(lst);
+    unsigned long stop = get_time_usec();
+
+    printf("The time datacreate takes: %d\n", stop -start);
 
     return (void *)dset;
 } /* end H5VL_provenance_dataset_create() */
@@ -2991,6 +2994,7 @@ H5VL_provenance_dataset_open(void *obj, const H5VL_loc_params_t *loc_params,
     void *under = NULL;
     H5VL_provenance_t *dset;
     H5VL_provenance_t *o = (H5VL_provenance_t *)obj;
+    unsigned long start = get_time_usec();
 
 #ifdef ENABLE_PROVNC_LOGGING
     printf("------- PASS THROUGH VOL DATASET Open\n");
@@ -3018,6 +3022,8 @@ H5VL_provenance_dataset_open(void *obj, const H5VL_loc_params_t *loc_params,
 
     free(lst->data.data_val);
     free(lst);
+    unsigned long stop = get_time_usec();
+    printf("Time dataopen takes :%d \n", stop -start);
 
     return (void *)dset;
 } /* end H5VL_provenance_dataset_open() */
@@ -3040,6 +3046,7 @@ H5VL_provenance_dataset_read(void *dset, hid_t mem_type_id, hid_t mem_space_id,
     H5VL_provenance_t *o = (H5VL_provenance_t *)dset;
     herr_t ret_value = -1;
     void * under;
+    unsigned long start = get_time_usec();
 
 #ifdef ENABLE_PROVNC_LOGGING
     printf("------- PASS THROUGH VOL DATASET Read\n");
@@ -3064,6 +3071,8 @@ H5VL_provenance_dataset_read(void *dset, hid_t mem_type_id, hid_t mem_space_id,
         }
         ret_value = 0;
     }
+    unsigned long stop = get_time_usec();
+    printf("Time datasetread takes:%d \n", stop - start);
 
     return ret_value;
 } /* end H5VL_provenance_dataset_read() */
@@ -3087,7 +3096,7 @@ H5VL_provenance_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id,
     H5VL_provenance_t *o = (H5VL_provenance_t *)dset;
     void* under;
     herr_t ret_value = -1;
-
+    unsigned long start = get_time_usec();
 
 
 #ifdef ENABLE_PROVNC_LOGGING
@@ -3116,6 +3125,11 @@ H5VL_provenance_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id,
     if(under) {
         ret_value = 0;
     }
+
+    unsigned long stop = get_time_usec();
+
+    printf("Time datasetwrite takes: %d\n", stop - start);
+
     return ret_value;
 } /* end H5VL_provenance_dataset_write() */
 
@@ -3744,6 +3758,7 @@ H5VL_provenance_file_open(const char *name, unsigned flags, hid_t fapl_id,
 {
     H5VL_provenance_t *file;
     void *under = NULL;
+    unsigned long start = get_time_usec();
 
 #ifdef ENABLE_PROVNC_LOGGING
     printf("------- PASS THROUGH VOL FILE Open\n");
@@ -3761,6 +3776,10 @@ H5VL_provenance_file_open(const char *name, unsigned flags, hid_t fapl_id,
     }
     else
         file = NULL;
+    
+    unsigned long stop = get_time_usec();
+
+    printf("Time it takes to open the file: %d \n", stop - start);
         
     return (void *)file;
 } /* end H5VL_provenance_file_open() */
