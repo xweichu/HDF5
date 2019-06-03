@@ -3,7 +3,7 @@
 #include <time.h>
 #include <sys/time.h>
 #define FILE "groups.h5"
-#define DATASIZE 1100
+#define DATASIZE 500
 #define _BSD_SOURCE
 
 unsigned long get_time_usec(void) {
@@ -30,7 +30,7 @@ int main() {
    file_id = H5Fcreate(FILE, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
    unsigned long stop = get_time_usec();
-   printf("time to create the file: %d", stop - start);
+   printf("time to create the file: %d\n", stop - start);
    
    start = get_time_usec();
 
@@ -47,7 +47,7 @@ int main() {
                           H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
    stop = get_time_usec();
    
-   printf("time to create the dataset: %d", stop - start);
+   printf("time to create the dataset: %d \n", stop - start);
 
    start = get_time_usec();
 
@@ -57,7 +57,7 @@ int main() {
 
 
     stop = get_time_usec();
-       printf("time to write the dataset: %d", stop - start);
+       printf("time to write the dataset: %d\n", stop - start);
    /* Close the data space for the first dataset. */
    status = H5Sclose(dataspace_id);
 
