@@ -3697,7 +3697,7 @@ H5VL_provenance_file_create(const char *name, unsigned flags, hid_t fcpl_id,
 {
     H5VL_provenance_t *file;
     void *under;
-
+    unsigned long start = get_time_usec();
 #ifdef ENABLE_PROVNC_LOGGING
     printf("------- PASS THROUGH VOL FILE Create\n");
 #endif
@@ -3720,6 +3720,8 @@ H5VL_provenance_file_create(const char *name, unsigned flags, hid_t fcpl_id,
         file->file_name = new_name;
         file->my_type = H5I_FILE;
     }
+    unsigned long stop = get_time_usec();
+    printf("Time it takes to create the file: %d \n", stop - start );
 
     return file;
 } /* end H5VL_provenance_file_create() */
