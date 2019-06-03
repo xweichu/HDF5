@@ -1,6 +1,7 @@
 
 #include "hdf5.h"
 #include <time.h>
+#include <sys/time.h>
 #define FILE "groups.h5"
 #define DATASIZE 1100
 #define _BSD_SOURCE
