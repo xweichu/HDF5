@@ -41,7 +41,7 @@
 #include "H5VLprovnc.h"
 #include "hdf5creat.h"
 
-#define DATASIZE 1500
+#define DATASIZE 1200
 
 /**********/
 /* Macros */
