@@ -25,6 +25,7 @@ int main() {
       for (j = 0; j < DATASIZE; j++)
          dset1_data[i][j] = j + i + 1;
 
+   unsigned long start = get_time_usec();
    /* Create a file. */
    file_id = H5Fcreate(FILE, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
