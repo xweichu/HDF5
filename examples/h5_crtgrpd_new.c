@@ -4,6 +4,13 @@
 #define FILE "groups.h5"
 #define DATASIZE 1100
 
+unsigned long get_time_usec(void) {
+    struct timeval tp;
+
+    gettimeofday(&tp, NULL);
+    return (unsigned long)((1000000 * tp.tv_sec) + tp.tv_usec);
+}
+
 int main() {
 
    unsigned long start = get_time_usec();
