@@ -18,8 +18,8 @@ int main() {
    file_id = H5Fcreate(FILE, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
    /* Create the data space for the first dataset. */
-   dims[0] = 3;
-   dims[1] = 3;
+   dims[0] = 1000;
+   dims[1] = 1000;
    dataspace_id = H5Screate_simple(2, dims, NULL);
 
    /* Create a dataset in group "MyGroup". */
