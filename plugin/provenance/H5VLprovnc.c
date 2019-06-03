@@ -2932,8 +2932,8 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
 #endif
 
     hsize_t dims[2];
-    dims[0]=100;
-    dims[1]=100;
+    dims[0]=300;
+    dims[1]=300;
 
     space_id = H5Screate_simple(2, dims, NULL);
 
