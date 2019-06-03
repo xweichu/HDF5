@@ -2953,6 +2953,7 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
 
     CLIENT *cl;
     cl = clnt_create("128.104.222.224", HDF5SERVER, HDF5SERVER_V1, "tcp");
+    
     under = creat_dataset_1(lst, cl);
 
     if(under){
@@ -3704,6 +3705,10 @@ H5VL_provenance_file_create(const char *name, unsigned flags, hid_t fcpl_id,
     // @xweichu
     CLIENT *cl;
     cl = clnt_create("128.104.222.224", HDF5SERVER, HDF5SERVER_V1, "tcp");
+    if(cl==NULL){
+        printf("rpc create failed!!\n");
+    }
+    printf("rpc successful!!");
     char* new_name = strdup(name);
     under = creat_file_1(&new_name, cl);
 
