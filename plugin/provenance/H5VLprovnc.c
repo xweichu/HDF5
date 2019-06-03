@@ -3704,7 +3704,8 @@ H5VL_provenance_file_create(const char *name, unsigned flags, hid_t fcpl_id,
 
     // @xweichu
     CLIENT *cl;
-    cl = clnt_create("128.104.222.224", HDF5SERVER, HDF5SERVER_V1, "tcp");
+    // cl = clnt_create("128.104.222.224", HDF5SERVER, HDF5SERVER_V1, "tcp");
+    cl = clnt_create("localhost", HDF5SERVER, HDF5SERVER_V1, "tcp");
     if(cl==NULL){
         char* test;
         test = (char*) malloc(1000);
