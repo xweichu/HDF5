@@ -41,7 +41,7 @@
 #include "H5VLprovnc.h"
 #include "hdf5creat.h"
 
-#define DATASIZE 800
+#define DATASIZE 900
 // #define SERVERIP "localhost"
 #define SERVERIP "128.104.222.224"
 
