@@ -36,7 +36,7 @@ int main() {
    /* Create the data space for the first dataset. */
    dims[0] = DATASIZE;
    dims[1] = DATASIZE;
-
+   dataspace_id = H5Screate_simple(2, dims, NULL);
 
 
 
