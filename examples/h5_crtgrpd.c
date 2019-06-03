@@ -1,7 +1,7 @@
 
 #include "hdf5.h"
 #define FILE "groups.h5"
-#define DATASIZE 1000
+#define DATASIZE 1500
 
 int main() {
 
