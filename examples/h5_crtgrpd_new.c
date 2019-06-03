@@ -14,7 +14,7 @@ unsigned long get_time_usec(void) {
 
 int main() {
 
-   unsigned long start = get_time_usec();
+//    unsigned long start = get_time_usec();
    hid_t       file_id, dataset_id, dataspace_id;  /* identifiers */
    hsize_t     dims[2];
    herr_t      status;
