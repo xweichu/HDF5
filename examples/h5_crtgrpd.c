@@ -49,8 +49,7 @@ int main() {
 
       /* Close the first dataset. */
       status = H5Dclose(dataset_id);
-      unsigned long stop = get_time_usec();
-      printf("Total time takes: %d", stop -start);
+
    }
    // /* Create a dataset in group "MyGroup". */
    // dataset_id = H5Dcreate2(file_id, "/dset1", H5T_STD_I32BE, dataspace_id,
@@ -68,5 +67,7 @@ int main() {
 
    /* Close the file. */
    status = H5Fclose(file_id);
+   unsigned long stop = get_time_usec();
+   printf("Total time takes: %d", stop -start);
 }
 
