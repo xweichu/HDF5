@@ -18,7 +18,7 @@ int main() {
    /* Create a file. */
    file_id = H5Fcreate(FILE, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
-   for(int i=0; i < 510; i++){
+   for(int i=0; i < 509; i++){
       /* Create the data space for the first dataset. */
       dims[0] = DATASIZE;
       dims[1] = DATASIZE;
