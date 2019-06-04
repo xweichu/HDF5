@@ -3114,7 +3114,7 @@ H5VL_provenance_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id,
     char* new_dsname = strdup(o->dataset_name);
     lst->dsname = new_dsname;
     lst->data.data_len=o->size;
-    printf("Memory alloc not success!\n");
+    // printf("Memory alloc not success!\n");
     lst->data.data_val= (int*) malloc(sizeof(int)*o->size);
     
 
