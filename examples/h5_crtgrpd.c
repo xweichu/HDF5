@@ -23,6 +23,24 @@ int main() {
    dims[1] = DATASIZE;
    dataspace_id = H5Screate_simple(2, dims, NULL);
 
+   for(int i=0; i < 10; i++){
+      char buf[7];
+      sprintf(buf, "/dst%d", i);
+
+      dataset_id = H5Dcreate2(file_id, buf, H5T_STD_I32BE, dataspace_id,
+                          H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+
+      /* Write the first dataset. */
+      status = H5Dwrite(dataset_id, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT,
+                        dset1_data);
+
+      /* Close the data space for the first dataset. */
+      status = H5Sclose(dataspace_id);
+
+      /* Close the first dataset. */
+      status = H5Dclose(dataset_id);
+
+   }
    /* Create a dataset in group "MyGroup". */
    dataset_id = H5Dcreate2(file_id, "/dset1", H5T_STD_I32BE, dataspace_id,
                           H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
