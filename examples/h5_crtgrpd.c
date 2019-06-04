@@ -1,7 +1,17 @@
 
 #include "hdf5.h"
+#include <time.h>
+#include <sys/time.h>
 #define FILE "/mnt/cephfs/groups.h5"
 #define DATASIZE 1250
+
+
+unsigned long get_time_usec(void) {
+    struct timeval tp;
+
+    gettimeofday(&tp, NULL);
+    return (unsigned long)((1000000 * tp.tv_sec) + tp.tv_usec);
+}
 
 int main() {
 
@@ -9,6 +19,7 @@ int main() {
    hsize_t     dims[2];
    herr_t      status;
    int         i, j, dset1_data[DATASIZE][DATASIZE];
+   unsigned long start = get_time_usec();
 
    /* Initialize the first dataset. */
    for (i = 0; i < DATASIZE; i++)
@@ -38,6 +49,8 @@ int main() {
 
       /* Close the first dataset. */
       status = H5Dclose(dataset_id);
+      unsigned long stop = get_time_usec();
+      printf("Total time takes: %d", stop -start);
    }
    // /* Create a dataset in group "MyGroup". */
    // dataset_id = H5Dcreate2(file_id, "/dset1", H5T_STD_I32BE, dataspace_id,
