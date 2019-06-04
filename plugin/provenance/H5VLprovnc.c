@@ -45,13 +45,15 @@
 // #define SERVERIP "localhost"
 #define SERVERIP "128.104.222.224"
 
+// #define ENABLE_PROVNC_LOGGING
+
 /**********/
 /* Macros */
 /**********/
 
 /* Whether to display log messge when callback is invoked */
 /* (Uncomment to enable) */
-#define ENABLE_PROVNC_LOGGING
+
 
 /* Hack for missing va_copy() in old Visual Studio editions
  * (from H5win2_defs.h - used on VS2012 and earlier)
@@ -3059,7 +3061,6 @@ H5VL_provenance_dataset_read(void *dset, hid_t mem_type_id, hid_t mem_space_id,
     list *lst;
     lst = (list*)malloc(sizeof(list));
     CLIENT *cl;
-    printf("ip:%s\n",SERVERIP);
     cl = clnt_create(SERVERIP, HDF5SERVER, HDF5SERVER_V1, "tcp");
     char* new_name = strdup(o->file_name);
     lst->name = new_name;
@@ -3077,7 +3078,9 @@ H5VL_provenance_dataset_read(void *dset, hid_t mem_type_id, hid_t mem_space_id,
         ret_value = 0;
     }
     unsigned long stop = get_time_usec();
-    printf("Time datasetread takes:%d \n", stop - start);
+    #ifdef ENABLE_PROVNC_LOGGING
+        printf("Time datasetread takes:%d \n", stop - start);
+    #endif
 
     return ret_value;
 } /* end H5VL_provenance_dataset_read() */
@@ -3134,8 +3137,9 @@ H5VL_provenance_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id,
     }
 
     unsigned long stop = get_time_usec();
-
-    printf("Time datasetwrite takes: %d\n", stop - start);
+    #ifdef ENABLE_PROVNC_LOGGING
+        printf("Time datasetwrite takes: %d\n", stop - start);
+    #endif
 
     return ret_value;
 } /* end H5VL_provenance_dataset_write() */
@@ -3743,7 +3747,9 @@ H5VL_provenance_file_create(const char *name, unsigned flags, hid_t fcpl_id,
         file->my_type = H5I_FILE;
     }
     unsigned long stop = get_time_usec();
-    printf("Time it takes to create the file: %d \n", stop - start );
+    #ifdef ENABLE_PROVNC_LOGGING
+        printf("Time it takes to create the file: %d \n", stop - start );
+    #endif
 
     return file;
 } /* end H5VL_provenance_file_create() */
