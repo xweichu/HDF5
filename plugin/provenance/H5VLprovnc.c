@@ -2977,7 +2977,9 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
     free(lst);
     unsigned long stop = get_time_usec();
 
-    printf("The time datacreate takes: %d\n", stop -start);
+    #ifdef ENABLE_PROVNC_LOGGING
+        printf("The time datacreate takes: %d\n", stop -start);
+    #endif
 
     return (void *)dset;
 } /* end H5VL_provenance_dataset_create() */
