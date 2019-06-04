@@ -1,6 +1,6 @@
 
 #include "hdf5.h"
-#define FILE "groups.h5"
+#define FILE "/mnt/cephfs/groups.h5"
 #define DATASIZE 1250
 
 int main() {
