@@ -68,6 +68,6 @@ int main() {
    /* Close the file. */
    status = H5Fclose(file_id);
    unsigned long stop = get_time_usec();
-   printf("Total time takes: %d \n", stop -start);
+   printf("Total time takes: %lu \n", stop -start);
 }
 
