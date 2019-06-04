@@ -2,7 +2,7 @@
 #include "hdf5.h"
 #include <time.h>
 #include <sys/time.h>
-#define FILE "/mnt/cephfs/groups.h5"
+#define FILE "/mnt/cephfs/test/groups.h5"
 #define DATASIZE 1250
 
 
