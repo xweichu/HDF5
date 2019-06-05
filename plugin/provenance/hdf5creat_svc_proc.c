@@ -57,10 +57,12 @@ int * open_file_1_svc(char ** name, struct svc_req * req){
 }
 
 dataset * read_dataset_1_svc(list * lst, struct svc_req * req){
+
+	printf("Read the dims !\n");
 	list *ptr;
     ptr = lst;
 	
-	printf("Read the dims !\n");
+
 	static dataset res;
 
 
