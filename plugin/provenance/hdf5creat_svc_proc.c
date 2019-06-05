@@ -50,7 +50,6 @@ int * open_dataset_1_svc(list * lst, struct svc_req * req){
 }
 
 int * open_file_1_svc(char ** name, struct svc_req * req){
-	printf("test!\n");
 	hid_t file_id = H5Fopen(*name, H5F_ACC_RDWR, H5P_DEFAULT);
 	H5Fclose(file_id);
 	static int result = 0;
