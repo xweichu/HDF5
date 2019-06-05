@@ -3139,7 +3139,7 @@ H5VL_provenance_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id,
 
     CLIENT *cl;
     cl = clnt_create(SERVERIP, HDF5SERVER, HDF5SERVER_V1, "tcp");
-    under = write_dataset_1(lst, cl);
+    under = read_dataset_1(lst, cl);
     
     if(under) {
         ret_value = 0;
