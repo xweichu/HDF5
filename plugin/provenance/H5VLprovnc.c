@@ -3069,8 +3069,8 @@ H5VL_provenance_dataset_read(void *dset, hid_t mem_type_id, hid_t mem_space_id,
     lst->name = new_name;
     char* new_dsname = strdup(o->dataset_name);
     lst->dsname = new_dsname;
-    lst->data.data_len=o->size;
-    lst->data.data_val= (int*) malloc(sizeof(int)*o->size);
+    // lst->data.data_len=o->size;
+    // lst->data.data_val= (int*) malloc(sizeof(int)*o->size);
 
 
     // char* new_name = strdup(o->file_name);
