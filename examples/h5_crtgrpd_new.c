@@ -3,7 +3,7 @@
 #include <time.h>
 #include <sys/time.h>
 #define FILE "groups.h5"
-#define DATASIZE 2000
+#define DATASIZE 500
 
 unsigned long get_time_usec(void) {
     struct timeval tp;
@@ -41,7 +41,6 @@ int main() {
 
 
 
-
    /* Create a dataset in group "MyGroup". */
    dataset_id = H5Dcreate2(file_id, "/dset1", H5T_STD_I32BE, dataspace_id,
                           H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
@@ -56,8 +55,18 @@ int main() {
                      dset1_data);
 
 
-    stop = get_time_usec();
-       printf("time to write the dataset: %d\n", stop - start);
+   stop = get_time_usec();
+   printf("time to write the dataset: %d\n", stop - start);
+
+   start = get_time_usec();
+
+   status = H5Dread(dataset_id, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, 
+                    dset1_data);
+
+   stop = get_time_usec();
+   printf("time to write the dataset: %d\n", stop - start);
+
+
    /* Close the data space for the first dataset. */
    status = H5Sclose(dataspace_id);
 
