@@ -45,7 +45,7 @@
 #define SERVERIP "localhost"
 // #define SERVERIP "128.104.222.224"
 
-// #define ENABLE_PROVNC_LOGGING
+#define ENABLE_PROVNC_LOGGING
 
 /**********/
 /* Macros */
@@ -3081,7 +3081,7 @@ H5VL_provenance_dataset_read(void *dset, hid_t mem_type_id, hid_t mem_space_id,
     }
     unsigned long stop = get_time_usec();
     #ifdef ENABLE_PROVNC_LOGGING
-        printf("Time datasetread takes:%d \n", stop - start);
+        printf("Time dataset read takes:%d \n", stop - start);
     #endif
 
     return ret_value;
