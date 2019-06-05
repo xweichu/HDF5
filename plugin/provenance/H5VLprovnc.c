@@ -42,8 +42,8 @@
 #include "hdf5creat.h"
 
 #define DATASIZE 1250
-// #define SERVERIP "localhost"
-#define SERVERIP "128.104.222.224"
+#define SERVERIP "localhost"
+// #define SERVERIP "128.104.222.224"
 
 // #define ENABLE_PROVNC_LOGGING
 
