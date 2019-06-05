@@ -3060,26 +3060,14 @@ H5VL_provenance_dataset_read(void *dset, hid_t mem_type_id, hid_t mem_space_id,
     printf("------- PASS THROUGH VOL DATASET Read\n");
 #endif
 
-    // list *lst;
-    // lst = (list*)malloc(sizeof(list));
-
     list *lst;
     lst = (list*)malloc(sizeof(list));
     char* new_name = strdup(o->file_name);
     lst->name = new_name;
     char* new_dsname = strdup(o->dataset_name);
     lst->dsname = new_dsname;
-    // lst->data.data_len=o->size;
-    // lst->data.data_val= (int*) malloc(sizeof(int)*o->size);
-
-
-    // char* new_name = strdup(o->file_name);
-    // lst->name = new_name;
-    // char* new_dsname = strdup(o->dataset_name);
-    // lst->dsname = new_dsname;
-    // lst->data.data_val= (int*) malloc(sizeof(int)*o->size);
-
-    printf("I'm really here!\n");
+    lst->data.data_len=o->size;
+    lst->data.data_val= (int*) malloc(sizeof(int)*o->size);
 
     CLIENT *cl;
     cl = clnt_create(SERVERIP, HDF5SERVER, HDF5SERVER_V1, "tcp");
@@ -3089,10 +3077,10 @@ H5VL_provenance_dataset_read(void *dset, hid_t mem_type_id, hid_t mem_space_id,
     if(under) {
         dataset *res = (dataset*) under;
         buf = (void*)res->data.data_val;
-        int *ptr = (int*) buf;
-        for(int i=0; i<9; i++){
-            printf("values:%d",ptr[i]);
-        }
+        // int *ptr = (int*) buf;
+        // for(int i=0; i<9; i++){
+        //     printf("values:%d",ptr[i]);
+        // }
         ret_value = 0;
     }
     unsigned long stop = get_time_usec();

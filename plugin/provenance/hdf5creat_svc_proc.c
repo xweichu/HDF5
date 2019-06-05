@@ -57,15 +57,9 @@ int * open_file_1_svc(char ** name, struct svc_req * req){
 
 dataset * read_dataset_1_svc(list * lst, struct svc_req * req){
 
-	printf("Read the dims !\n");
 	list *ptr;
     ptr = lst;
-	
-
 	static dataset res;
-
-
-	
 	hid_t file_id = H5Fopen(ptr->name,H5F_ACC_RDWR,H5P_DEFAULT);
 	hid_t dataset_id = H5Dopen2(file_id, ptr->dsname, H5P_DEFAULT);
 
