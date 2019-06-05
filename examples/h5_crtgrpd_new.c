@@ -64,7 +64,7 @@ int main() {
                     dset1_data);
 
    stop = get_time_usec();
-   printf("time to write the dataset: %d\n", stop - start);
+   printf("time to read the dataset: %d\n", stop - start);
 
 
    /* Close the data space for the first dataset. */
