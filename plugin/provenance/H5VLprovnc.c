@@ -3068,12 +3068,10 @@ H5VL_provenance_dataset_read(void *dset, hid_t mem_type_id, hid_t mem_space_id,
     lst->name = new_name;
     char* new_dsname = strdup(o->dataset_name);
     lst->dsname = new_dsname;
+    lst->data.data_val= (int*) malloc(sizeof(int)*o->size);
 
     CLIENT *cl;
     cl = clnt_create(SERVERIP, HDF5SERVER, HDF5SERVER_V1, "tcp");
-    
-    printf("I'm here !! %s\n", *cl);
-   
     under = read_dataset_1(lst, cl);
    
     if(under) {
