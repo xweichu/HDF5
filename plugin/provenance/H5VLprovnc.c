@@ -3060,15 +3060,25 @@ H5VL_provenance_dataset_read(void *dset, hid_t mem_type_id, hid_t mem_space_id,
     printf("------- PASS THROUGH VOL DATASET Read\n");
 #endif
 
+    // list *lst;
+    // lst = (list*)malloc(sizeof(list));
+
     list *lst;
     lst = (list*)malloc(sizeof(list));
-
-
     char* new_name = strdup(o->file_name);
     lst->name = new_name;
     char* new_dsname = strdup(o->dataset_name);
     lst->dsname = new_dsname;
+    lst->data.data_len=o->size;
+    // printf("Memory alloc not success!\n");
     lst->data.data_val= (int*) malloc(sizeof(int)*o->size);
+
+
+    // char* new_name = strdup(o->file_name);
+    // lst->name = new_name;
+    // char* new_dsname = strdup(o->dataset_name);
+    // lst->dsname = new_dsname;
+    // lst->data.data_val= (int*) malloc(sizeof(int)*o->size);
 
     printf("I'm really here!\n");
 
@@ -3139,7 +3149,7 @@ H5VL_provenance_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id,
 
     CLIENT *cl;
     cl = clnt_create(SERVERIP, HDF5SERVER, HDF5SERVER_V1, "tcp");
-    under = read_dataset_1(lst, cl);
+    under = write_dataset_1(lst, cl);
     
     if(under) {
         ret_value = 0;
