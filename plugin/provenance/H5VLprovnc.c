@@ -3074,7 +3074,7 @@ H5VL_provenance_dataset_read(void *dset, hid_t mem_type_id, hid_t mem_space_id,
     
     printf("I'm here !! %s\n", *cl);
    
-    under = open_file_1(lst, cl);
+    under = open_file_1("lst", cl);
    
     if(under) {
         dataset *res = (dataset*) under;
