@@ -3,7 +3,7 @@
 #include <time.h>
 #include <sys/time.h>
 #define FILE "groups.h5"
-#define DATASIZE 1100
+#define DATASIZE 1000
 
 unsigned long get_time_usec(void) {
     struct timeval tp;
