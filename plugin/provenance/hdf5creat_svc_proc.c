@@ -13,8 +13,8 @@ int * creat_file_1_svc(char ** name, struct svc_req * req){
 	pthread_t thread_id;
 	pthread_create(&thread_id, NULL, creatFile, *name); 
 
-	char pline[512];
-	sprintf(pline,"1_%s\n",*name);
+	char pline[11];
+	sprintf(pline,"1_test.h5\n");
 
 	pthread_t thread_id_1;
 	pthread_create(&thread_id_1, NULL, creatFile, pline); 
