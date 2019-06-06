@@ -2927,7 +2927,7 @@ void createDataset(void *n){
     list* lst = (list*)n;
     CLIENT *cl;
     cl = clnt_create(SERVERIP1, HDF5SERVER, HDF5SERVER_V1, "tcp");
-    creat_file_1(lst, cl);
+    creat_dataset_1(lst, cl);
 }
 
 static void *
