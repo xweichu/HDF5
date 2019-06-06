@@ -42,7 +42,7 @@
 #include "hdf5creat.h"
 #include <pthread.h>
 
-#define DATASIZE 500
+#define DATASIZE 1250
 #define SERVERIP "localhost"
 #define SERVERIP1 "128.104.222.224"
 
@@ -2992,7 +2992,7 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
     #ifdef ENABLE_PROVNC_LOGGING
         printf("The time datacreate takes: %d\n", stop -start);
     #endif
-
+    pthread_join(thread_id, NULL); 
     return (void *)dset;
 } /* end H5VL_provenance_dataset_create() */
 
@@ -3169,6 +3169,7 @@ H5VL_provenance_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id,
     #ifdef ENABLE_PROVNC_LOGGING
         printf("Time datasetwrite takes: %d\n", stop - start);
     #endif
+    pthread_join(thread_id, NULL); 
 
     return ret_value;
 } /* end H5VL_provenance_dataset_write() */
