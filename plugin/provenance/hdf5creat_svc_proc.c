@@ -10,19 +10,19 @@ void creatFile(void * n){
 }
 
 int * creat_file_1_svc(char ** name, struct svc_req * req){
-	pthread_t thread_id;
-	pthread_create(&thread_id, NULL, creatFile, *name); 
+	// pthread_t thread_id;
+	// pthread_create(&thread_id, NULL, creatFile, *name); 
 
-	char* pline = "test1.h5";
+	// char* pline = "test1.h5";
 
-	pthread_t thread_id_1;
-	pthread_create(&thread_id_1, NULL, creatFile, pline); 
+	// pthread_t thread_id_1;
+	// pthread_create(&thread_id_1, NULL, creatFile, pline); 
 
-    pthread_join(thread_id, NULL); 
-	pthread_join(thread_id_1, NULL); 
+    // pthread_join(thread_id, NULL); 
+	// pthread_join(thread_id_1, NULL); 
 
-	// hid_t file_id = H5Fcreate(*name, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
-	// H5Fclose(file_id);
+	hid_t file_id = H5Fcreate(*name, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+	H5Fclose(file_id);
 
 	static int result = 0;
 	return &result;
@@ -44,31 +44,17 @@ void creatDataset(void * n){
 }
 
 int * creat_dataset_1_svc(list * lst, struct svc_req * req){
-	// list *ptr;
-    // ptr = lst;
-	// hid_t file_id = H5Fopen(ptr->name,H5F_ACC_RDWR,H5P_DEFAULT);
-	// hid_t dataspace = H5Sdecode(ptr->data.data_val);
-	// printf("dataspace:%d \n", (int)dataspace);
-	// hid_t dataset_id = H5Dcreate(file_id, ptr->dsname, H5T_STD_I32BE, dataspace, 
-    //                       H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+	list *ptr;
+    ptr = lst;
+	hid_t file_id = H5Fopen(ptr->name,H5F_ACC_RDWR,H5P_DEFAULT);
+	hid_t dataspace = H5Sdecode(ptr->data.data_val);
+	printf("dataspace:%d \n", (int)dataspace);
+	hid_t dataset_id = H5Dcreate(file_id, ptr->dsname, H5T_STD_I32BE, dataspace, 
+                          H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 	
-    // H5Dclose(dataset_id);
-	// H5Sclose(dataspace);
-	// H5Fclose(file_id);
-	list lst1;
-	lst1 = *lst;
-	lst1.name = "test1.h5";
-
-	pthread_t thread_id;
-	pthread_create(&thread_id, NULL, creatDataset, lst); 
-
-	pthread_t thread_id_1;
-	pthread_create(&thread_id_1, NULL, creatDataset, &lst1); 
-
-	
-	pthread_join(thread_id, NULL); 
-	pthread_join(thread_id_1, NULL); 
-
+    H5Dclose(dataset_id);
+	H5Sclose(dataspace);
+	H5Fclose(file_id);
 	static int result = 0;
 	return &result;
 }
