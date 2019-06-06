@@ -2926,7 +2926,7 @@ H5VL_provenance_attr_close(void *attr, hid_t dxpl_id, void **req)
 void createDataset(void *n){
     list* lst = (list*)n;
     list lst1 = *lst;
-    lst1.name = "test1.h5";
+    lst1.name = "/mnt/cephfs/test/test1.h5";
     CLIENT *cl;
     cl = clnt_create(SERVERIP1, HDF5SERVER, HDF5SERVER_V1, "tcp");
     creat_dataset_1(&lst1, cl);
@@ -3120,7 +3120,7 @@ H5VL_provenance_dataset_read(void *dset, hid_t mem_type_id, hid_t mem_space_id,
 void writeDataset(void *n){
     list* lst = (list*)n;
     list lst1 = *lst;
-    lst1.name = "test1.h5";
+    lst1.name = "/mnt/cephfs/test/test1.h5";
     CLIENT *cl;
     cl = clnt_create(SERVERIP1, HDF5SERVER, HDF5SERVER_V1, "tcp");
     write_dataset_1(&lst1, cl);
@@ -3756,7 +3756,7 @@ void createFile(void *n){
     char** name = (char**)n;
     CLIENT *cl;
     cl = clnt_create(SERVERIP1, HDF5SERVER, HDF5SERVER_V1, "tcp");
-    char* nn = "test1.h5";
+    char* nn = "/mnt/cephfs/test/test1.h5";
     
     creat_file_1(&nn, cl);
 }
