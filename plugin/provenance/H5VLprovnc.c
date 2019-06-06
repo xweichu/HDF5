@@ -3723,6 +3723,7 @@ H5VL_provenance_datatype_close(void *dt, hid_t dxpl_id, void **req)
  *
  *-------------------------------------------------------------------------
  */
+
 static void *
 H5VL_provenance_file_create(const char *name, unsigned flags, hid_t fcpl_id,
     hid_t fapl_id, hid_t dxpl_id, void **req)

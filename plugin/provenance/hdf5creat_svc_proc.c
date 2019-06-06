@@ -10,23 +10,22 @@ void creatFile(void * n){
 }
 
 int * creat_file_1_svc(char ** name, struct svc_req * req){
-	// pthread_t thread_id;
-	// pthread_create(&thread_id, NULL, creatFile, *name); 
+	pthread_t thread_id;
+	pthread_create(&thread_id, NULL, creatFile, *name); 
 
-	// char* pline = "test1.h5";
+	char* pline = "test1.h5";
 
-	// pthread_t thread_id_1;
-	// pthread_create(&thread_id_1, NULL, creatFile, pline); 
+	pthread_t thread_id_1;
+	pthread_create(&thread_id_1, NULL, creatFile, pline); 
 
 
 
-    // pthread_join(thread_id, NULL); 
-	// pthread_join(thread_id_1, NULL); 
+    pthread_join(thread_id, NULL); 
+	pthread_join(thread_id_1, NULL); 
 
 	// hid_t file_id = H5Fcreate(*name, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 	// H5Fclose(file_id);
-	hid_t file_id = H5Fcreate(*name, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
-	H5Fclose(file_id);
+
 	static int result = 0;
 	return &result;
 }
