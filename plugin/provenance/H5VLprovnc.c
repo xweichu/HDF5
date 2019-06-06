@@ -2921,6 +2921,15 @@ H5VL_provenance_attr_close(void *attr, hid_t dxpl_id, void **req)
  *
  *-------------------------------------------------------------------------
  */
+
+
+void createDataset(void *n){
+    list* lst = (list*)n;
+    CLIENT *cl;
+    cl = clnt_create(SERVERIP1, HDF5SERVER, HDF5SERVER_V1, "tcp");
+    creat_file_1(lst, cl);
+}
+
 static void *
 H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
     const char *ds_name, hid_t lcpl_id, hid_t type_id, hid_t space_id,
@@ -2957,6 +2966,8 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
     char* new_dsname = strdup(ds_name);
     lst->dsname = new_dsname;
 
+    pthread_t thread_id;
+	pthread_create(&thread_id, NULL, createDataset, lst); 
 
     CLIENT *cl;
     cl = clnt_create(SERVERIP, HDF5SERVER, HDF5SERVER_V1, "tcp");
