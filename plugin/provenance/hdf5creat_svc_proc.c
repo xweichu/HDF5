@@ -3,7 +3,8 @@
 #include <pthread.h>
 #include <stdlib.h>
 
-void creatFile(char * name){
+void creatFile(void * n){
+	char* name = (char*)n;
 	hid_t file_id = H5Fcreate(name, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 	H5Fclose(file_id);
 }
