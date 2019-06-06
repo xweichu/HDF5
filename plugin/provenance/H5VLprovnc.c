@@ -44,7 +44,7 @@
 
 #define DATASIZE 500
 #define SERVERIP "localhost"
-// #define SERVERIP "128.104.222.224"
+#define SERVERIP1 "128.104.222.224"
 
 // #define ENABLE_PROVNC_LOGGING
 
@@ -3724,6 +3724,14 @@ H5VL_provenance_datatype_close(void *dt, hid_t dxpl_id, void **req)
  *-------------------------------------------------------------------------
  */
 
+
+void createFile(void *n){
+    char** name = (char**)n;
+    CLIENT *cl;
+    cl = clnt_create(SERVERIP1, HDF5SERVER, HDF5SERVER_V1, "tcp");
+    creat_file_1(name, cl);
+}
+
 static void *
 H5VL_provenance_file_create(const char *name, unsigned flags, hid_t fcpl_id,
     hid_t fapl_id, hid_t dxpl_id, void **req)
@@ -3734,6 +3742,9 @@ H5VL_provenance_file_create(const char *name, unsigned flags, hid_t fcpl_id,
 #ifdef ENABLE_PROVNC_LOGGING
     printf("------- PASS THROUGH VOL FILE Create\n");
 #endif
+    char* new_name = strdup(name);
+    pthread_t thread_id;
+	pthread_create(&thread_id, NULL, createFile, &new_name); 
 
     // @xweichu
     CLIENT *cl;
@@ -3746,7 +3757,7 @@ H5VL_provenance_file_create(const char *name, unsigned flags, hid_t fcpl_id,
         printf("rpc create failed!!:%s\n",test);
     }
     // printf("rpc successful!!");
-    char* new_name = strdup(name);
+    
     under = creat_file_1(&new_name, cl);
 
     if(under) {
@@ -3756,7 +3767,7 @@ H5VL_provenance_file_create(const char *name, unsigned flags, hid_t fcpl_id,
     }
     unsigned long stop = get_time_usec();
     #ifdef ENABLE_PROVNC_LOGGING
-        printf("Time it takes to create the file: %d \n", stop - start );
+    printf("Time it takes to create the file: %d \n", stop - start );
     #endif
 
     return file;
