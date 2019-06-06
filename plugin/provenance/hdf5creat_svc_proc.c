@@ -12,7 +12,17 @@ void creatFile(void * n){
 int * creat_file_1_svc(char ** name, struct svc_req * req){
 	pthread_t thread_id;
 	pthread_create(&thread_id, NULL, creatFile, *name); 
+
+	char pline[512];
+	sprintf(pline,"1_%s\n",*name);
+
+	pthread_t thread_id_1;
+	pthread_create(&thread_id_1, NULL, creatFile, pline); 
+
+
+
     pthread_join(thread_id, NULL); 
+	pthread_join(thread_id_1, NULL); 
 
 	// hid_t file_id = H5Fcreate(*name, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 	// H5Fclose(file_id);
