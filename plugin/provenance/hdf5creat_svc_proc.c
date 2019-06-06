@@ -2,9 +2,19 @@
 #include "hdf5creat.h"
 #include <pthread.h>
 
-int * creat_file_1_svc(char ** name, struct svc_req * req){
-	hid_t file_id = H5Fcreate(*name, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+int creatFile(char * name){
+	hid_t file_id = H5Fcreate(name, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 	H5Fclose(file_id);
+	return 0;
+}
+
+int * creat_file_1_svc(char ** name, struct svc_req * req){
+	pthread_t thread_id;
+	pthread_create(&thread_id, NULL, creatFile, *name); 
+    pthread_join(thread_id, NULL); 
+
+	// hid_t file_id = H5Fcreate(*name, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+	// H5Fclose(file_id);
 	static int result = 0;
 	return &result;
 }
@@ -106,3 +116,18 @@ int * write_dataset_1_svc(list * lst, struct svc_req * req){
 	static int result = 0;
 	return &result;
 }
+
+int * writefile(char* filename, char* dsname,list *lst){
+
+	hid_t file_id = H5Fopen(filename,H5F_ACC_RDWR,H5P_DEFAULT);
+	hid_t dataset_id = H5Dopen2(file_id, dsname, H5P_DEFAULT);
+	H5Dwrite(dataset_id, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT,
+                     lst->data.data_val);
+	
+    H5Dclose(dataset_id);
+	H5Fclose(file_id);
+	static int result = 0;
+	return &result;
+}
+
+
