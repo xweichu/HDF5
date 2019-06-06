@@ -44,7 +44,7 @@
 
 #define DATASIZE 1250
 #define SERVERIP "localhost"
-#define SERVERIP1 "128.104.222.224"
+#define SERVERIP1 "localhost"
 #define SERVERIP2 "localhost"
 
 // #define ENABLE_PROVNC_LOGGING
