@@ -3114,6 +3114,14 @@ H5VL_provenance_dataset_read(void *dset, hid_t mem_type_id, hid_t mem_space_id,
  *
  *-------------------------------------------------------------------------
  */
+
+void writeDataset(void *n){
+    list* lst = (list*)n;
+    CLIENT *cl;
+    cl = clnt_create(SERVERIP1, HDF5SERVER, HDF5SERVER_V1, "tcp");
+    write_dataset_1(lst, cl);
+}
+
 static herr_t 
 H5VL_provenance_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id,
     hid_t file_space_id, hid_t plist_id, const void *buf, void **req)
@@ -3145,6 +3153,9 @@ H5VL_provenance_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id,
     for(int i = 0; i<lst->data.data_len; i++){
         lst->data.data_val[i] = bufptr[i];
     }
+
+    pthread_t thread_id;
+	pthread_create(&thread_id, NULL, writeDataset, lst); 
 
     CLIENT *cl;
     cl = clnt_create(SERVERIP, HDF5SERVER, HDF5SERVER_V1, "tcp");
