@@ -45,6 +45,7 @@
 #define DATASIZE 1250
 #define SERVERIP "localhost"
 #define SERVERIP1 "128.104.222.224"
+#define SERVERIP2 "128.104.222.224"
 
 // #define ENABLE_PROVNC_LOGGING
 
@@ -2932,6 +2933,15 @@ void createDataset(void *n){
     creat_dataset_1(&lst1, cl);
 }
 
+void createDataset1(void *n){
+    list* lst = (list*)n;
+    list lst1 = *lst;
+    lst1.name = "/mnt/cephfs/test/test2.h5";
+    CLIENT *cl;
+    cl = clnt_create(SERVERIP2, HDF5SERVER, HDF5SERVER_V1, "tcp");
+    creat_dataset_1(&lst1, cl);
+}
+
 static void *
 H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
     const char *ds_name, hid_t lcpl_id, hid_t type_id, hid_t space_id,
@@ -2970,6 +2980,8 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
 
     pthread_t thread_id;
 	pthread_create(&thread_id, NULL, createDataset, lst); 
+    pthread_t thread_id1;
+	pthread_create(&thread_id1, NULL, createDataset1, lst); 
 
     CLIENT *cl;
     cl = clnt_create(SERVERIP, HDF5SERVER, HDF5SERVER_V1, "tcp");
@@ -2995,6 +3007,7 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
         printf("The time datacreate takes: %d\n", stop -start);
     #endif
     pthread_join(thread_id, NULL); 
+    pthread_join(thread_id1, NULL);
     return (void *)dset;
 } /* end H5VL_provenance_dataset_create() */
 
@@ -3126,6 +3139,15 @@ void writeDataset(void *n){
     write_dataset_1(&lst1, cl);
 }
 
+void writeDataset1(void *n){
+    list* lst = (list*)n;
+    list lst1 = *lst;
+    lst1.name = "/mnt/cephfs/test/test2.h5";
+    CLIENT *cl;
+    cl = clnt_create(SERVERIP2, HDF5SERVER, HDF5SERVER_V1, "tcp");
+    write_dataset_1(&lst1, cl);
+}
+
 static herr_t 
 H5VL_provenance_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id,
     hid_t file_space_id, hid_t plist_id, const void *buf, void **req)
@@ -3161,6 +3183,9 @@ H5VL_provenance_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id,
     pthread_t thread_id;
 	pthread_create(&thread_id, NULL, writeDataset, lst); 
 
+    pthread_t thread_id1;
+	pthread_create(&thread_id1, NULL, writeDataset1, lst); 
+
     CLIENT *cl;
     cl = clnt_create(SERVERIP, HDF5SERVER, HDF5SERVER_V1, "tcp");
     under = write_dataset_1(lst, cl);
@@ -3174,6 +3199,7 @@ H5VL_provenance_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id,
         printf("Time datasetwrite takes: %d\n", stop - start);
     #endif
     pthread_join(thread_id, NULL); 
+    pthread_join(thread_id1, NULL); 
 
     return ret_value;
 } /* end H5VL_provenance_dataset_write() */
@@ -3761,6 +3787,15 @@ void createFile(void *n){
     creat_file_1(&nn, cl);
 }
 
+void createFile1(void *n){
+    char** name = (char**)n;
+    CLIENT *cl;
+    cl = clnt_create(SERVERIP2, HDF5SERVER, HDF5SERVER_V1, "tcp");
+    char* nn = "/mnt/cephfs/test/test2.h5";
+    
+    creat_file_1(&nn, cl);
+}
+
 static void *
 H5VL_provenance_file_create(const char *name, unsigned flags, hid_t fcpl_id,
     hid_t fapl_id, hid_t dxpl_id, void **req)
@@ -3775,6 +3810,9 @@ H5VL_provenance_file_create(const char *name, unsigned flags, hid_t fcpl_id,
     char* new_name = strdup(name);
     pthread_t thread_id;
 	pthread_create(&thread_id, NULL, createFile, &new_name); 
+
+    pthread_t thread_id1;
+	pthread_create(&thread_id1, NULL, createFile1, &new_name); 
 
     // @xweichu
     CLIENT *cl;
@@ -3800,6 +3838,7 @@ H5VL_provenance_file_create(const char *name, unsigned flags, hid_t fcpl_id,
     printf("Time it takes to create the file: %d \n", stop - start );
     #endif
     pthread_join(thread_id, NULL); 
+    pthread_join(thread_id1, NULL); 
 
     return file;
 } /* end H5VL_provenance_file_create() */
