@@ -42,7 +42,7 @@
 #include "hdf5creat.h"
 #include <pthread.h>
 
-#define DATASIZE 1100
+#define DATASIZE 500
 #define SERVERIP "localhost"
 // #define SERVERIP "128.104.222.224"
 
