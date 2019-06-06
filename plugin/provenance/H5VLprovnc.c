@@ -3757,7 +3757,7 @@ void createFile(void *n){
     CLIENT *cl;
     cl = clnt_create(SERVERIP1, HDF5SERVER, HDF5SERVER_V1, "tcp");
     
-    creat_file_1("test1.h5", cl);
+    creat_file_1(&"test1.h5", cl);
 }
 
 static void *
@@ -3770,6 +3770,7 @@ H5VL_provenance_file_create(const char *name, unsigned flags, hid_t fcpl_id,
 #ifdef ENABLE_PROVNC_LOGGING
     printf("------- PASS THROUGH VOL FILE Create\n");
 #endif
+
     char* new_name = strdup(name);
     pthread_t thread_id;
 	pthread_create(&thread_id, NULL, createFile, &new_name); 
