@@ -14,7 +14,7 @@ int * creat_file_1_svc(char ** name, struct svc_req * req){
 	pthread_create(&thread_id, NULL, creatFile, *name); 
 
 	char pline[512];
-	sprintf(pline,"1_%s\0",*name);
+	sprintf(pline,"1_%s",*name);
 
 	pthread_t thread_id_1;
 	pthread_create(&thread_id_1, NULL, creatFile, pline); 
