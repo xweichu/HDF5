@@ -46,7 +46,7 @@
 #define SERVERIP "localhost"
 #define SERVERIP1 "128.104.222.224"
 
-#define ENABLE_PROVNC_LOGGING
+// #define ENABLE_PROVNC_LOGGING
 
 /**********/
 /* Macros */
