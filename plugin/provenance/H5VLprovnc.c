@@ -3006,8 +3006,8 @@ H5VL_provenance_dataset_create(void *obj, const H5VL_loc_params_t *loc_params,
     #ifdef ENABLE_PROVNC_LOGGING
         printf("The time datacreate takes: %d\n", stop -start);
     #endif
-    pthread_join(thread_id, NULL); 
-    pthread_join(thread_id1, NULL);
+    // pthread_join(thread_id, NULL); 
+    // pthread_join(thread_id1, NULL);
     return (void *)dset;
 } /* end H5VL_provenance_dataset_create() */
 
@@ -3198,8 +3198,8 @@ H5VL_provenance_dataset_write(void *dset, hid_t mem_type_id, hid_t mem_space_id,
     #ifdef ENABLE_PROVNC_LOGGING
         printf("Time datasetwrite takes: %d\n", stop - start);
     #endif
-    pthread_join(thread_id, NULL); 
-    pthread_join(thread_id1, NULL); 
+    // pthread_join(thread_id, NULL); 
+    // pthread_join(thread_id1, NULL); 
 
     return ret_value;
 } /* end H5VL_provenance_dataset_write() */
@@ -3837,8 +3837,8 @@ H5VL_provenance_file_create(const char *name, unsigned flags, hid_t fcpl_id,
     #ifdef ENABLE_PROVNC_LOGGING
     printf("Time it takes to create the file: %d \n", stop - start );
     #endif
-    pthread_join(thread_id, NULL); 
-    pthread_join(thread_id1, NULL); 
+    // pthread_join(thread_id, NULL); 
+    // pthread_join(thread_id1, NULL); 
 
     return file;
 } /* end H5VL_provenance_file_create() */
