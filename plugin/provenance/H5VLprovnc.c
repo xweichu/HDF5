@@ -40,6 +40,7 @@
 #include "/usr/local/hdf5/include/hdf5.h"
 #include "H5VLprovnc.h"
 #include "hdf5creat.h"
+#include <pthread.h>
 
 #define DATASIZE 1100
 // #define SERVERIP "localhost"
