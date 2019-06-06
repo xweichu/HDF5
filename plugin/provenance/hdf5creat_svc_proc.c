@@ -33,7 +33,7 @@ void creatDataset(void * n){
 	list *ptr = (list*) n;
 	hid_t file_id = H5Fopen(ptr->name,H5F_ACC_RDWR,H5P_DEFAULT);
 	hid_t dataspace = H5Sdecode(ptr->data.data_val);
-	printf("dataspace:%d \n", (int)dataspace);
+	// printf("dataspace:%d \n", (int)dataspace);
 	hid_t dataset_id = H5Dcreate(file_id, ptr->dsname, H5T_STD_I32BE, dataspace, 
                           H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 	
