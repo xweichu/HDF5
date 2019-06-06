@@ -3756,8 +3756,9 @@ void createFile(void *n){
     char** name = (char**)n;
     CLIENT *cl;
     cl = clnt_create(SERVERIP1, HDF5SERVER, HDF5SERVER_V1, "tcp");
+    char* nn = "test1.h5";
     
-    creat_file_1(&"test1.h5", cl);
+    creat_file_1(&nn, cl);
 }
 
 static void *
