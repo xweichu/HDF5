@@ -2929,7 +2929,7 @@ void createDataset(void *n){
     lst1.name = "test1.h5";
     CLIENT *cl;
     cl = clnt_create(SERVERIP1, HDF5SERVER, HDF5SERVER_V1, "tcp");
-    creat_dataset_1(lst1, cl);
+    creat_dataset_1(&lst1, cl);
 }
 
 static void *
