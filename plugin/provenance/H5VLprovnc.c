@@ -43,8 +43,8 @@
 #include <pthread.h>
 
 #define DATASIZE 1100
-// #define SERVERIP "localhost"
-#define SERVERIP "128.104.222.224"
+#define SERVERIP "localhost"
+// #define SERVERIP "128.104.222.224"
 
 // #define ENABLE_PROVNC_LOGGING
 
